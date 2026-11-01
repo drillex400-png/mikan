@@ -445,6 +445,16 @@ func (c *Client) SetCommands(ctx context.Context, desc string) error {
 	return c.call(ctx, "setMyCommands", map[string]any{"commands": []map[string]string{{"command": "start", "description": desc}}}, nil)
 }
 
+// SetChatCommands shows /start and /admin in the command menu of one private chat, the
+// admin's: Telegram's "chat" scope overrides the bot's default list for that chat alone, so
+// every other chat keeps seeing /start only.
+func (c *Client) SetChatCommands(ctx context.Context, chat int64, start, admin string) error {
+	return c.call(ctx, "setMyCommands", map[string]any{
+		"commands": []map[string]string{{"command": "start", "description": start}, {"command": "admin", "description": admin}},
+		"scope":    map[string]any{"type": "chat", "chat_id": chat},
+	}, nil)
+}
+
 // SetMenuButton puts the Mini App next to the input field of every private chat (url
 // empty: back to the command list).
 func (c *Client) SetMenuButton(ctx context.Context, text, url string) error {

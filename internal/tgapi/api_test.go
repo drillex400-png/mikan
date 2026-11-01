@@ -54,3 +54,35 @@ func TestPlainText(t *testing.T) {
 		t.Fatalf("plain %q", got)
 	}
 }
+
+// The admin's command menu is set for that chat alone (scope "chat"); the bot-wide list keeps
+// /start only, so nobody else sees /admin.
+func TestSetChatCommandsIsScopedToOneChat(t *testing.T) {
+	var got map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewDecoder(r.Body).Decode(&got)
+		_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "result": true})
+	}))
+	defer srv.Close()
+	c := NewClient(srv.URL, "1:x", nil)
+	if err := c.SetChatCommands(context.Background(), 77, "Menu", "Admin"); err != nil {
+		t.Fatal(err)
+	}
+	sc, _ := got["scope"].(map[string]any)
+	if sc["type"] != "chat" || sc["chat_id"] != float64(77) {
+		t.Fatalf("the scope is not that one chat: %v", got["scope"])
+	}
+	cmds, _ := got["commands"].([]any)
+	if len(cmds) != 2 {
+		t.Fatalf("commands: %v", got["commands"])
+	}
+	if err := c.SetCommands(context.Background(), "Menu"); err != nil {
+		t.Fatal(err)
+	}
+	if _, scoped := got["scope"]; scoped {
+		t.Fatalf("the bot-wide list got a scope: %v", got)
+	}
+	if cmds, _ := got["commands"].([]any); len(cmds) != 1 {
+		t.Fatalf("the bot-wide list must stay /start only: %v", got["commands"])
+	}
+}
