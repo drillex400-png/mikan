@@ -5,6 +5,7 @@ the signed manifest, and the panel shows the one in its language.
 
 ## 0.5.2.1
 ### en
+- **Servers in /admin**: pick a server and manage it from the bot. The card shows whether it answers, its version (and whether it is behind the panel), load, connections and the last day's traffic. Turn it on or off, check it now, test its speed, update it to the panel's version, restart its containers, rename it, set its public name and channel, remove it (asks twice). Needs the panel of this version and the bot of this version; the panel's own server cannot be restarted or removed from the bot. Removing uses the very rules of the admin panel.
 - **/admin overview with money**: revenue today, over 7 days and this month by currency (never added across currencies) and new clients in 24 hours.
 - **Client filters in /admin**: ending soon, ended, traffic 90%+, no Telegram, blocked. Needs the panel of this version; an older panel still opens the plain list.
 - **Clear errors in /admin** instead of "That did not work": the panel is down, the panel is older than the bot, the value was refused, a broadcast is already going.
@@ -15,6 +16,7 @@ the signed manifest, and the panel shows the one in its language.
 - **An independent fork**: its own repository, image (`ghcr.io/drillex400-png/mikan`) and release signing keys. The GPL-3.0 license and the original attribution are kept.
 
 ### ru
+- **Серверы в /admin**: выберите сервер и управляйте им из бота. Карточка показывает, отвечает ли он, версию (и отстаёт ли от панели), нагрузку, подключения и трафик за сутки. Можно включить и выключить, проверить сейчас, измерить скорость, обновить до версии панели, перезапустить контейнеры, переименовать, задать публичное имя и канал, удалить (спросит дважды). Нужны панель и бот этой версии; основной сервер панели из бота нельзя перезапустить или удалить. Удаление идёт по тем же правилам, что и в админке.
 - **Сводка в /admin с деньгами**: выручка за сегодня, 7 дней и месяц по валютам (валюты не складываются) и новые клиенты за сутки.
 - **Фильтры клиентов в /admin**: скоро закончатся, закончились, трафик 90%+, без Telegram, заблокированы. Нужна панель этой версии; на старой панели открывается обычный список.
 - **Понятные ошибки в /admin** вместо «Не получилось»: панель недоступна, панель старее бота, значение не принято, рассылка уже идёт.
