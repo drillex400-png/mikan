@@ -12,6 +12,10 @@ import (
 var (
 	// ErrNotFound: no such subscription or tariff.
 	ErrNotFound = errors.New("not found")
+	// ErrNotAdmin: the Telegram account is not one of the bot's admins.
+	ErrNotAdmin = errors.New("not_admin")
+	// ErrAdminInput: an admin action asked for something out of its bounds.
+	ErrAdminInput = errors.New("admin_input")
 	// ErrLinkLimit: the account holds MaxLinks subscriptions already.
 	ErrLinkLimit = errors.New("max_links")
 	// ErrNotChannel: the channel check was asked about a chat that is not the bot's channel.
@@ -136,6 +140,8 @@ var codes = []struct {
 	{"topup_currency", ErrTopupCurrency},
 	{"provider_off", ErrProviderOff},
 	{"promo_unavailable", ErrPromo},
+	{"not_admin", ErrNotAdmin},
+	{"admin_input", ErrAdminInput},
 	{"context_canceled", context.Canceled},
 	{"deadline_exceeded", context.DeadlineExceeded},
 }

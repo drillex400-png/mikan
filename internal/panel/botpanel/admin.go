@@ -1,0 +1,221 @@
+package botpanel
+
+import (
+	"context"
+	"database/sql"
+	"strconv"
+	"strings"
+	"time"
+
+	"mikan/internal/panel/audit"
+	"mikan/internal/panel/domain"
+	"mikan/internal/panel/model"
+	"mikan/internal/panel/store/db"
+	"mikan/internal/panel/tgbot"
+)
+
+// The panel's side of /admin. Nothing here trusts the bot: every method opens with check, so
+// a call from an account that is not in the admin list is refused whatever the bot decided to
+// show, and every change is written to the audit log with the Telegram account that made it.
+
+// Admin is tgbot.Admin inside the panel's process.
+func (l *Local) Admin() tgbot.Admin { return admin{l} }
+
+type admin struct{ l *Local }
+
+// actor is how the audit log names the admin: "tg:<id>".
+func actor(by int64) string { return "tg:" + strconv.FormatInt(by, 10) }
+
+// check: by is an admin right now (the list is read again, so a removed admin loses access at
+// once).
+func (a admin) check(ctx context.Context, by int64) error {
+	if !a.l.Config(ctx).IsAdmin(by) {
+		return model.ErrNotAdmin
+	}
+	return nil
+}
+
+func (a admin) now() time.Time {
+	if a.l.Now != nil {
+		return a.l.Now()
+	}
+	return time.Now()
+}
+
+// note writes what an admin changed. It carries no secret: ids and numbers only.
+func (a admin) note(ctx context.Context, by int64, action string, id int64, details map[string]any) {
+	if details == nil {
+		details = map[string]any{}
+	}
+	details["actor"] = actor(by)
+	_ = audit.Write(ctx, a.l.Store.Q, a.now(), audit.Entry{
+		Action: action, TargetType: "user", TargetID: strconv.FormatInt(id, 10), Details: details,
+	})
+}
+
+func (a admin) Overview(ctx context.Context, by int64) (tgbot.AdminOverview, error) {
+	if err := a.check(ctx, by); err != nil {
+		return tgbot.AdminOverview{}, err
+	}
+	now := a.now()
+	c, err := domain.CountStates(ctx, a.l.Store.Q, now)
+	if err != nil {
+		return tgbot.AdminOverview{}, err
+	}
+	o := tgbot.AdminOverview{Users: c.Total, Active: c.Active, Expiring: c.Expiring, Expired: c.Expired, Disabled: c.Disabled}
+	nodes, err := a.l.Store.Q.ListNodes(ctx)
+	if err != nil {
+		return o, err
+	}
+	for _, n := range nodes {
+		o.Nodes++
+		if n.Enabled == 1 {
+			o.NodesOnline++
+		}
+	}
+	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location()).Unix()
+	if rows, err := a.l.Store.Q.PaymentTotals(ctx, sql.NullInt64{Int64: monthStart, Valid: true}); err == nil {
+		for _, r := range rows {
+			o.PaidMonth += r.N
+		}
+	}
+	return o, nil
+}
+
+func (a admin) view(ctx context.Context, u db.User) tgbot.AdminUser {
+	now := a.now()
+	grants := int64(0)
+	if g, err := a.l.GrantsLeft(ctx, u.ID, now); err == nil {
+		grants = g.Main
+	}
+	v := tgbot.AdminUser{
+		ID: u.ID, Name: u.Name, Contact: u.Contact, State: domain.State(u, grants, now),
+		Used: u.UsedUp + u.UsedDown, Limit: u.TrafficLimit.Int64, ExpiresAt: u.ExpiresAt.Int64,
+	}
+	if n, err := a.l.DeviceCount(ctx, u.ID); err == nil {
+		v.Devices = n
+	}
+	if tg, err := a.l.Owner(ctx, u.ID); err == nil {
+		v.TgID = tg
+	}
+	return v
+}
+
+func (a admin) Users(ctx context.Context, by int64, query string, page int) ([]tgbot.AdminUser, bool, error) {
+	if err := a.check(ctx, by); err != nil {
+		return nil, false, err
+	}
+	all, err := a.l.Store.Q.ListUsers(ctx)
+	if err != nil {
+		return nil, false, err
+	}
+	q := strings.ToLower(strings.TrimSpace(query))
+	if len(q) > 64 {
+		q = q[:64]
+	}
+	if page < 0 {
+		page = 0
+	}
+	var out []tgbot.AdminUser
+	skip, more := page*tgbot.AdminPageSize, false
+	for _, u := range all {
+		if q != "" && !strings.Contains(strings.ToLower(u.Name), q) && !strings.Contains(strings.ToLower(u.Contact), q) {
+			continue
+		}
+		if skip > 0 {
+			skip--
+			continue
+		}
+		if len(out) == tgbot.AdminPageSize {
+			more = true
+			break
+		}
+		out = append(out, a.view(ctx, u))
+	}
+	return out, more, nil
+}
+
+func (a admin) User(ctx context.Context, by, id int64) (tgbot.AdminUser, error) {
+	if err := a.check(ctx, by); err != nil {
+		return tgbot.AdminUser{}, err
+	}
+	u, err := a.l.Store.Q.GetUser(ctx, id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return tgbot.AdminUser{}, model.ErrNotFound
+		}
+		return tgbot.AdminUser{}, err
+	}
+	return a.view(ctx, u), nil
+}
+
+func (a admin) GrantDays(ctx context.Context, by, id, days int64) (tgbot.AdminUser, error) {
+	if err := a.check(ctx, by); err != nil {
+		return tgbot.AdminUser{}, err
+	}
+	if days < 1 || days > tgbot.MaxAdminDays {
+		return tgbot.AdminUser{}, model.ErrAdminInput
+	}
+	u, err := a.l.Users.Extend(ctx, id, days)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return tgbot.AdminUser{}, model.ErrNotFound
+		}
+		return tgbot.AdminUser{}, err
+	}
+	a.note(ctx, by, "tgadmin.extend", id, map[string]any{"days": days})
+	return a.view(ctx, u), nil
+}
+
+func (a admin) SetDisabled(ctx context.Context, by, id int64, disabled bool) (tgbot.AdminUser, error) {
+	if err := a.check(ctx, by); err != nil {
+		return tgbot.AdminUser{}, err
+	}
+	u, err := a.l.Users.Update(ctx, id, domain.Patch{Disabled: &disabled})
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return tgbot.AdminUser{}, model.ErrNotFound
+		}
+		return tgbot.AdminUser{}, err
+	}
+	a.note(ctx, by, "tgadmin.disable", id, map[string]any{"disabled": disabled})
+	return a.view(ctx, u), nil
+}
+
+func (a admin) Nodes(ctx context.Context, by int64) ([]tgbot.AdminNode, error) {
+	if err := a.check(ctx, by); err != nil {
+		return nil, err
+	}
+	rows, err := a.l.Store.Q.ListNodes(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]tgbot.AdminNode, 0, len(rows))
+	for _, n := range rows {
+		host := n.PublicHost
+		if host == "" {
+			host = n.Domain
+		}
+		out = append(out, tgbot.AdminNode{ID: n.ID, Name: n.Name, Host: host, Enabled: n.Enabled == 1})
+	}
+	return out, nil
+}
+
+func (a admin) Payments(ctx context.Context, by int64) ([]tgbot.AdminPayment, error) {
+	if err := a.check(ctx, by); err != nil {
+		return nil, err
+	}
+	rows, err := a.l.Store.Q.ListPayments(ctx, db.ListPaymentsParams{BeforeID: 1 << 62, Lim: tgbot.AdminPageSize})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]tgbot.AdminPayment, 0, len(rows))
+	for _, r := range rows {
+		p := r.Payment
+		out = append(out, tgbot.AdminPayment{
+			ID: p.ID, User: r.UserName, Provider: p.Provider, Status: p.Status,
+			Amount: p.Amount, Currency: p.Currency, At: time.Unix(p.CreatedAt, 0),
+		})
+	}
+	return out, nil
+}
