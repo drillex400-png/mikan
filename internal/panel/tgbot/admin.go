@@ -13,9 +13,12 @@ import (
 
 // Limits of what one admin action may do, held by the panel and shown by the screens.
 const (
-	MaxAdminDays  = 365  // one extension, in days
-	AdminPageSize = 8    // rows on a page of a list
-	MaxBroadcast  = 3000 // characters in a broadcast, as in the admin panel
+	MaxAdminDays  = 365    // one extension, in days
+	AdminPageSize = 8      // rows on a page of a list
+	MaxBroadcast  = 3000   // characters in a broadcast, as in the admin panel
+	MaxLimitGB    = 100000 // one traffic limit, in GB
+	MaxDevices    = 1000   // one device limit
+	MaxNote       = 500    // characters in a note
 )
 
 // AdminOverview is the figures on the admin's first screen.
@@ -37,6 +40,35 @@ type AdminUser struct {
 	Limit     int64  // bytes; 0: none
 	Devices   int64
 	TgID      int64 // the linked Telegram account; 0: none
+	// What the card also shows. DeviceLimit and Tariff are 0/"" when there is none.
+	DeviceLimit int64
+	Tariff      string
+	Note        string
+	CreatedAt   int64 // unix seconds
+	Balance     int64 // in the minor units of the bot's currency; 0: none
+}
+
+// AdminTariff is a tariff as the admin picks it.
+type AdminTariff struct {
+	ID       int64
+	Name     string
+	Days     int64
+	Limit    int64 // bytes; 0: none
+	Devices  int64 // 0: none
+	PriceRub int64 // kopecks; 0: none
+	OnSale   bool
+}
+
+// AdminPaymentInfo is one payment as its card shows it.
+type AdminPaymentInfo struct {
+	AdminPayment
+	Kind     string
+	Tariff   string
+	TermDays int64
+	Error    string
+	PaidAt   int64
+	Refunded bool
+	UserID   int64
 }
 
 // AdminNode is a node as the admin sees it.
@@ -72,8 +104,29 @@ type Admin interface {
 	GrantDays(ctx context.Context, by, id, days int64) (AdminUser, error)
 	// SetDisabled blocks or unblocks the subscription.
 	SetDisabled(ctx context.Context, by, id int64, disabled bool) (AdminUser, error)
+	// SetTrafficLimit sets the traffic limit in GB (0: no limit).
+	SetTrafficLimit(ctx context.Context, by, id, gb int64) (AdminUser, error)
+	// SetDeviceLimit sets the device limit (0: no limit).
+	SetDeviceLimit(ctx context.Context, by, id, n int64) (AdminUser, error)
+	// ResetTraffic starts the counted traffic over.
+	ResetTraffic(ctx context.Context, by, id int64) (AdminUser, error)
+	// Reissue gives the subscription a new link; the old one stops working. The link is not
+	// returned: the admin never sees it.
+	Reissue(ctx context.Context, by, id int64) (AdminUser, error)
+	// SetNote sets the admin's note on the subscription (empty clears it).
+	SetNote(ctx context.Context, by, id int64, note string) (AdminUser, error)
+	// Delete removes the subscription for good.
+	Delete(ctx context.Context, by, id int64) error
+	// Tariffs lists the tariffs that are not archived.
+	Tariffs(ctx context.Context, by int64) ([]AdminTariff, error)
+	// SetTariff applies a tariff to the subscription: its limits, and the term starts over.
+	SetTariff(ctx context.Context, by, id, tariff int64) (AdminUser, error)
 	Nodes(ctx context.Context, by int64) ([]AdminNode, error)
-	Payments(ctx context.Context, by int64) ([]AdminPayment, error)
+	// Payments lists a page of payments, newest first; status filters ("" all, paid, pending,
+	// failed, refunded). The second result is whether there is a page after this one.
+	Payments(ctx context.Context, by int64, status string, page int) ([]AdminPayment, bool, error)
+	// Payment is one payment's card.
+	Payment(ctx context.Context, by, id int64) (AdminPaymentInfo, error)
 	// BroadcastAudience is how many accounts a broadcast would reach now.
 	BroadcastAudience(ctx context.Context, by int64) (int, error)
 	// Broadcast queues the text for every account with a subscription and returns how many

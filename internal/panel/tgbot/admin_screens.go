@@ -20,8 +20,8 @@ import (
 
 // adminState is what the bot waits for from one admin's next message.
 type adminState struct {
-	kind  string // "search", "days" or "broadcast"
-	user  int64  // for "days": the subscription
+	kind  string // search, days, broadcast, gb, devices or note
+	user  int64  // for days, gb, devices and note: the subscription
 	query string
 }
 
@@ -126,6 +126,33 @@ func (b *Bot) adminMessage(ctx context.Context, m *tgapi.Message) bool {
 			return true
 		}
 		b.adminDraw(chat, 0, fmt.Sprintf("ae:%d:%d", st.user, n), "")
+	case "gb":
+		n, err := strconv.ParseInt(text, 10, 64)
+		if err != nil || n < 0 || n > MaxLimitGB {
+			b.setWait(chat, st)
+			b.adminDraw(chat, 0, fmt.Sprintf("ak:%d", st.user), fmt.Sprintf(aw.gbBad, MaxLimitGB))
+			return true
+		}
+		b.adminDraw(chat, 0, fmt.Sprintf("ag:%d:%d", st.user, n), "")
+	case "devices":
+		n, err := strconv.ParseInt(text, 10, 64)
+		if err != nil || n < 0 || n > MaxDevices {
+			b.setWait(chat, st)
+			b.adminDraw(chat, 0, fmt.Sprintf("ak:%d", st.user), fmt.Sprintf(aw.devBad, MaxDevices))
+			return true
+		}
+		b.adminDraw(chat, 0, fmt.Sprintf("av:%d:%d", st.user, n), "")
+	case "note":
+		if utf8.RuneCountInString(text) > MaxNote {
+			b.setWait(chat, st)
+			b.adminDraw(chat, 0, fmt.Sprintf("ak:%d", st.user), fmt.Sprintf(aw.noteBad, MaxNote))
+			return true
+		}
+		if text == "-" {
+			text = ""
+		}
+		b.setDraft(chat, text)
+		b.adminDraw(chat, 0, fmt.Sprintf("aN:%d:s", st.user), "")
 	}
 	_ = adm
 	return true
@@ -167,7 +194,8 @@ func (b *Bot) adminPress(ctx context.Context, chat, msg int64, data string) bool
 	// Exactly the admin's codes, nothing that merely starts with "a" (the subscribers' "app").
 	cmd, _, _ := strings.Cut(data, ":")
 	switch cmd {
-	case "a", "ao", "au", "an", "ap", "ac", "ae", "ak", "ad", "as", "az", "ab":
+	case "a", "ao", "au", "an", "ap", "aP", "ac", "ae", "ak", "ad", "as", "az", "ab",
+		"ag", "av", "ar", "ai", "ax", "at", "aT", "aN":
 	default:
 		return false
 	}
@@ -190,15 +218,16 @@ func (b *Bot) adminScreen(ctx context.Context, chat int64, data, notice string) 
 	}
 	cmd, arg, _ := strings.Cut(data, ":")
 	home := []tgapi.Button{{Text: aw.back, CallbackData: "a"}}
+	kb := func(rows ...[]tgapi.Button) *tgapi.Keyboard { return &tgapi.Keyboard{InlineKeyboard: rows} }
 	fail := func(err error) (string, *tgapi.Keyboard) {
 		switch {
 		case errors.Is(err, model.ErrNotAdmin):
 			return html.EscapeString(aw.notAdmin), nil
 		case errors.Is(err, model.ErrNotFound):
-			return html.EscapeString(aw.notFound), &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{home}}
+			return html.EscapeString(aw.notFound), kb(home)
 		}
 		b.d.Log.Warn("telegram: the admin's screen", "screen", cmd, "err", err)
-		return html.EscapeString(aw.failed), &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{home}}
+		return html.EscapeString(aw.failed), kb(home)
 	}
 	pre := ""
 	if notice != "" {
@@ -210,13 +239,17 @@ func (b *Bot) adminScreen(ctx context.Context, chat int64, data, notice string) 
 		if err != nil {
 			return fail(err)
 		}
-		t := "<b>" + html.EscapeString(aw.overview) + "</b>\n\n" + strings.Join([]string{
-			fmt.Sprintf("%s: %d", aw.statUsers, o.Users), fmt.Sprintf("%s: %d", aw.statActive, o.Active),
-			fmt.Sprintf("%s: %d", aw.statExpiring, o.Expiring), fmt.Sprintf("%s: %d", aw.statExpired, o.Expired),
-			fmt.Sprintf("%s: %d", aw.statDisabled, o.Disabled),
-			fmt.Sprintf("%s: %d/%d", aw.statNodes, o.NodesOnline, o.Nodes), fmt.Sprintf("%s: %d", aw.statPaid, o.PaidMonth),
+		t := head("📊", aw.overview) + "\n\n" + strings.Join([]string{
+			pill("👥", aw.statUsers, o.Users),
+			pill("🟢", aw.statActive, o.Active),
+			pill("🟡", aw.statExpiring, o.Expiring),
+			pill("🔴", aw.statExpired, o.Expired),
+			pill("⛔", aw.statDisabled, o.Disabled),
+			"",
+			html.EscapeString("🖥 "+aw.statNodes+": ") + fmt.Sprintf("<b>%d/%d</b>", o.NodesOnline, o.Nodes),
+			pill("💳", aw.statPaid, o.PaidMonth),
 		}, "\n")
-		return pre + t, &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{{{Text: aw.refresh, CallbackData: "ao"}}, home}}
+		return pre + t, kb([]tgapi.Button{{Text: aw.refresh, CallbackData: "ao"}}, home)
 	case "au":
 		page := int(atoi(arg))
 		q := b.queryOf(chat)
@@ -226,7 +259,7 @@ func (b *Bot) adminScreen(ctx context.Context, chat int64, data, notice string) 
 		}
 		var rows [][]tgapi.Button
 		for _, u := range us {
-			rows = append(rows, []tgapi.Button{{Text: truncate(u.Name+" · "+stateMark(u.State), 40), CallbackData: "ak:" + strconv.FormatInt(u.ID, 10)}})
+			rows = append(rows, []tgapi.Button{{Text: truncate(stateDot(u.State)+" "+u.Name, 40), CallbackData: "ak:" + strconv.FormatInt(u.ID, 10)}})
 		}
 		nav := []tgapi.Button{}
 		if page > 0 {
@@ -239,25 +272,29 @@ func (b *Bot) adminScreen(ctx context.Context, chat int64, data, notice string) 
 			rows = append(rows, nav)
 		}
 		rows = append(rows, []tgapi.Button{{Text: aw.search, CallbackData: "as"}}, home)
-		t := "<b>" + html.EscapeString(aw.users) + "</b>"
+		t := head("👥", aw.users)
 		if q != "" {
-			t += " · " + html.EscapeString(q)
+			t += "\n🔎 " + html.EscapeString(q)
 		}
 		if len(us) == 0 {
 			t += "\n\n" + html.EscapeString(aw.searchNone)
 		} else {
 			t += "\n" + html.EscapeString(fmt.Sprintf(aw.page, page+1))
 		}
-		return pre + t, &tgapi.Keyboard{InlineKeyboard: rows}
+		return pre + t, kb(rows...)
 	case "as":
 		b.setWait(chat, adminState{kind: "search"})
-		return pre + html.EscapeString(aw.searchAsk), &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{{{Text: aw.back, CallbackData: "au:0"}}}}
+		return pre + html.EscapeString(aw.searchAsk), kb([]tgapi.Button{{Text: aw.back, CallbackData: "au:0"}})
 	case "ak":
 		return b.adminCard(ctx, adm, chat, atoi(arg), aw, pre, fail)
 	case "ad":
 		id := atoi(arg)
 		b.setWait(chat, adminState{kind: "days", user: id})
-		return pre + html.EscapeString(aw.daysAsk), &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{{{Text: aw.cancel, CallbackData: "ak:" + strconv.FormatInt(id, 10)}}}}
+		idS := strconv.FormatInt(id, 10)
+		return pre + html.EscapeString(aw.daysAsk), kb(
+			[]tgapi.Button{{Text: "+7", CallbackData: "ae:" + idS + ":7"}, {Text: "+30", CallbackData: "ae:" + idS + ":30"},
+				{Text: "+90", CallbackData: "ae:" + idS + ":90"}, {Text: "+365", CallbackData: "ae:" + idS + ":365"}},
+			[]tgapi.Button{{Text: aw.cancel, CallbackData: "ak:" + idS}})
 	case "ae": // ae:<user>:<days> asks; az confirms
 		idS, daysS, _ := strings.Cut(arg, ":")
 		id, days := atoi(idS), atoi(daysS)
@@ -277,40 +314,160 @@ func (b *Bot) adminScreen(ctx context.Context, chat int64, data, notice string) 
 			ask = aw.askBlock
 		}
 		return pre + html.EscapeString(fmt.Sprintf(ask, u.Name)), confirm(aw, "az:b:"+idS+":"+flag, "ak:"+idS)
+	case "ag": // ag:<user> asks for the GB; ag:<user>:<gb> asks to confirm it
+		idS, gbS, has := strings.Cut(arg, ":")
+		id := atoi(idS)
+		if !has {
+			b.setWait(chat, adminState{kind: "gb", user: id})
+			return pre + html.EscapeString(fmt.Sprintf(aw.gbAsk, MaxLimitGB)), kb(
+				[]tgapi.Button{{Text: "50", CallbackData: "ag:" + idS + ":50"}, {Text: "100", CallbackData: "ag:" + idS + ":100"},
+					{Text: "300", CallbackData: "ag:" + idS + ":300"}, {Text: "∞", CallbackData: "ag:" + idS + ":0"}},
+				[]tgapi.Button{{Text: aw.cancel, CallbackData: "ak:" + idS}})
+		}
+		u, err := adm.User(ctx, chat, id)
+		if err != nil {
+			return fail(err)
+		}
+		return pre + html.EscapeString(fmt.Sprintf(aw.askGB, u.Name, limitWord(aw, atoi(gbS)))), confirm(aw, "az:g:"+idS+":"+gbS, "ak:"+idS)
+	case "av":
+		idS, nS, has := strings.Cut(arg, ":")
+		id := atoi(idS)
+		if !has {
+			b.setWait(chat, adminState{kind: "devices", user: id})
+			return pre + html.EscapeString(fmt.Sprintf(aw.devAsk, MaxDevices)), kb(
+				[]tgapi.Button{{Text: "1", CallbackData: "av:" + idS + ":1"}, {Text: "3", CallbackData: "av:" + idS + ":3"},
+					{Text: "5", CallbackData: "av:" + idS + ":5"}, {Text: "∞", CallbackData: "av:" + idS + ":0"}},
+				[]tgapi.Button{{Text: aw.cancel, CallbackData: "ak:" + idS}})
+		}
+		u, err := adm.User(ctx, chat, id)
+		if err != nil {
+			return fail(err)
+		}
+		return pre + html.EscapeString(fmt.Sprintf(aw.askDev, u.Name, limitWord(aw, atoi(nS)))), confirm(aw, "az:v:"+idS+":"+nS, "ak:"+idS)
+	case "ar":
+		u, err := adm.User(ctx, chat, atoi(arg))
+		if err != nil {
+			return fail(err)
+		}
+		return pre + html.EscapeString(fmt.Sprintf(aw.askReset, u.Name)), confirm(aw, "az:r:"+arg, "ak:"+arg)
+	case "ai":
+		u, err := adm.User(ctx, chat, atoi(arg))
+		if err != nil {
+			return fail(err)
+		}
+		return pre + html.EscapeString(fmt.Sprintf(aw.askReissue, u.Name)), confirm(aw, "az:i:"+arg, "ak:"+arg)
+	case "ax": // ax:<user> asks; ax:<user>:2 asks again; the second yes deletes
+		idS, step, _ := strings.Cut(arg, ":")
+		u, err := adm.User(ctx, chat, atoi(idS))
+		if err != nil {
+			return fail(err)
+		}
+		if step == "2" {
+			return pre + html.EscapeString(fmt.Sprintf(aw.askDelete2, u.Name)), confirm(aw, "az:x:"+idS, "ak:"+idS)
+		}
+		return pre + html.EscapeString(fmt.Sprintf(aw.askDelete, u.Name)), confirm(aw, "ax:"+idS+":2", "ak:"+idS)
+	case "aN": // aN:<user> asks for the note; aN:<user>:s asks to confirm the held one
+		idS, step, _ := strings.Cut(arg, ":")
+		id := atoi(idS)
+		if step != "s" {
+			b.dropDraft(chat)
+			b.setWait(chat, adminState{kind: "note", user: id})
+			return pre + html.EscapeString(fmt.Sprintf(aw.noteAsk, MaxNote)), kb([]tgapi.Button{{Text: aw.cancel, CallbackData: "ak:" + idS}})
+		}
+		text, ok := b.draftOf(chat)
+		if !ok {
+			return b.adminCard(ctx, adm, chat, id, aw, pre, fail)
+		}
+		if _, err := adm.SetNote(ctx, chat, id, text); err != nil {
+			return fail(err)
+		}
+		b.dropDraft(chat)
+		return b.adminCard(ctx, adm, chat, id, aw, html.EscapeString(aw.done)+"\n\n", fail)
+	case "at": // at:<user> lists the plans; aT:<user>:<plan> asks to apply one
+		ts, err := adm.Tariffs(ctx, chat)
+		if err != nil {
+			return fail(err)
+		}
+		var rows [][]tgapi.Button
+		for _, t := range ts {
+			rows = append(rows, []tgapi.Button{{Text: truncate("🏷 "+t.Name+" · "+fmt.Sprintf("%d д", t.Days), 40), CallbackData: fmt.Sprintf("aT:%s:%d", arg, t.ID)}})
+		}
+		rows = append(rows, []tgapi.Button{{Text: aw.back, CallbackData: "ak:" + arg}})
+		t := head("🏷", aw.tariffBtn)
+		if len(ts) == 0 {
+			t += "\n\n" + html.EscapeString(aw.noTariffs)
+		}
+		return pre + t, kb(rows...)
+	case "aT":
+		idS, tS, _ := strings.Cut(arg, ":")
+		u, err := adm.User(ctx, chat, atoi(idS))
+		if err != nil {
+			return fail(err)
+		}
+		ts, err := adm.Tariffs(ctx, chat)
+		if err != nil {
+			return fail(err)
+		}
+		name := ""
+		for _, t := range ts {
+			if t.ID == atoi(tS) {
+				name = t.Name
+			}
+		}
+		if name == "" {
+			return fail(model.ErrNotFound)
+		}
+		return pre + html.EscapeString(fmt.Sprintf(aw.askTariff, name, u.Name)), confirm(aw, "az:t:"+idS+":"+tS, "ak:"+idS)
 	case "az": // the confirmed change
 		if arg == "m" { // the broadcast: its text is the one held for this admin, once
 			text, ok := b.draftOf(chat)
 			b.dropDraft(chat)
 			if !ok {
-				return pre + html.EscapeString(aw.bcGone), &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{{{Text: aw.broadcast, CallbackData: "ab"}}, home}}
+				return pre + html.EscapeString(aw.bcGone), kb([]tgapi.Button{{Text: aw.broadcast, CallbackData: "ab"}}, home)
 			}
 			n, err := adm.Broadcast(ctx, chat, text)
 			switch {
 			case errors.Is(err, model.ErrBroadcastBusy):
-				return pre + html.EscapeString(aw.bcBusy), &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{home}}
+				return pre + html.EscapeString(aw.bcBusy), kb(home)
 			case errors.Is(err, model.ErrBroadcastOff):
-				return pre + html.EscapeString(aw.bcOff), &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{home}}
+				return pre + html.EscapeString(aw.bcOff), kb(home)
 			case err != nil:
 				return fail(err)
 			}
-			return pre + html.EscapeString(fmt.Sprintf(aw.bcSent, n)), &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{home}}
+			return pre + html.EscapeString(fmt.Sprintf(aw.bcSent, n)), kb(home)
 		}
 		kind, rest, _ := strings.Cut(arg, ":")
 		idS, v, _ := strings.Cut(rest, ":")
 		id := atoi(idS)
+		done := html.EscapeString(aw.done) + "\n\n"
 		var err error
 		switch kind {
 		case "e":
 			_, err = adm.GrantDays(ctx, chat, id, atoi(v))
 		case "b":
 			_, err = adm.SetDisabled(ctx, chat, id, v == "1")
+		case "g":
+			_, err = adm.SetTrafficLimit(ctx, chat, id, atoi(v))
+		case "v":
+			_, err = adm.SetDeviceLimit(ctx, chat, id, atoi(v))
+		case "r":
+			_, err = adm.ResetTraffic(ctx, chat, id)
+		case "t":
+			_, err = adm.SetTariff(ctx, chat, id, atoi(v))
+		case "i":
+			_, err = adm.Reissue(ctx, chat, id)
+			done = html.EscapeString(aw.reissued) + "\n\n"
+		case "x":
+			if err = adm.Delete(ctx, chat, id); err == nil {
+				return html.EscapeString(aw.deleted), kb([]tgapi.Button{{Text: aw.users, CallbackData: "au:0"}}, home)
+			}
 		default:
 			return fail(model.ErrAdminInput)
 		}
 		if err != nil {
 			return fail(err)
 		}
-		return b.adminCard(ctx, adm, chat, id, aw, html.EscapeString(aw.done)+"\n\n", fail)
+		return b.adminCard(ctx, adm, chat, id, aw, done, fail)
 	case "ab": // ab asks for the text; ab:p previews it and asks to confirm
 		if arg == "x" {
 			b.dropDraft(chat)
@@ -319,11 +476,11 @@ func (b *Bot) adminScreen(ctx context.Context, chat int64, data, notice string) 
 		if arg != "p" {
 			b.dropDraft(chat)
 			b.setWait(chat, adminState{kind: "broadcast"})
-			return pre + html.EscapeString(fmt.Sprintf(aw.bcAsk, MaxBroadcast)), &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{{{Text: aw.cancel, CallbackData: "a"}}}}
+			return pre + html.EscapeString(fmt.Sprintf(aw.bcAsk, MaxBroadcast)), kb([]tgapi.Button{{Text: aw.cancel, CallbackData: "a"}})
 		}
 		text, ok := b.draftOf(chat)
 		if !ok {
-			return pre + html.EscapeString(aw.bcGone), &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{{{Text: aw.broadcast, CallbackData: "ab"}}, home}}
+			return pre + html.EscapeString(aw.bcGone), kb([]tgapi.Button{{Text: aw.broadcast, CallbackData: "ab"}}, home)
 		}
 		n, err := adm.BroadcastAudience(ctx, chat)
 		if err != nil {
@@ -331,58 +488,163 @@ func (b *Bot) adminScreen(ctx context.Context, chat int64, data, notice string) 
 		}
 		if n == 0 {
 			b.dropDraft(chat)
-			return pre + html.EscapeString(aw.bcNone), &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{home}}
+			return pre + html.EscapeString(aw.bcNone), kb(home)
 		}
 		// The text is shown as the clients get it: the same rendering, the same variables.
 		body := Render(text, map[string]string{"brand": BrandOf(ctx, b.d.Backend)})
 		return pre + html.EscapeString(aw.bcPreview) + "\n\n" + body + "\n\n" + html.EscapeString(fmt.Sprintf(aw.bcAsk2, n)),
-			&tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{{{Text: aw.bcSend, CallbackData: "az:m"}}, {{Text: aw.cancel, CallbackData: "ab:x"}}}}
+			kb([]tgapi.Button{{Text: aw.bcSend, CallbackData: "az:m"}}, []tgapi.Button{{Text: aw.cancel, CallbackData: "ab:x"}})
 	case "an":
 		ns, err := adm.Nodes(ctx, chat)
 		if err != nil {
 			return fail(err)
 		}
-		lines := []string{"<b>" + html.EscapeString(aw.nodes) + "</b>", ""}
+		lines := []string{head("🖥", aw.srvTitle), ""}
 		for _, n := range ns {
-			st := aw.nodeOff
+			dot, st := "🔴", aw.nodeOff
 			if n.Enabled {
-				st = aw.nodeOn
+				dot, st = "🟢", aw.nodeOn
 			}
-			lines = append(lines, html.EscapeString(n.Name)+" · "+html.EscapeString(st))
+			lines = append(lines, dot+" <b>"+html.EscapeString(n.Name)+"</b> · "+html.EscapeString(st))
 		}
 		if len(ns) == 0 {
 			lines = append(lines, html.EscapeString(aw.noNodes))
 		}
-		return pre + strings.Join(lines, "\n"), &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{home}}
-	case "ap":
-		ps, err := adm.Payments(ctx, chat)
+		return pre + strings.Join(lines, "\n"), kb([]tgapi.Button{{Text: aw.refresh, CallbackData: "an"}}, home)
+	case "ap": // ap:<filter>:<page>; the filter is a letter, "" all
+		fl, pgS, _ := strings.Cut(arg, ":")
+		status := payFilterStatus(fl)
+		page := int(atoi(pgS))
+		ps, more, err := adm.Payments(ctx, chat, status, page)
 		if err != nil {
 			return fail(err)
 		}
-		lines := []string{"<b>" + html.EscapeString(aw.payments) + "</b>", ""}
+		var rows [][]tgapi.Button
 		for _, p := range ps {
-			lines = append(lines, html.EscapeString(fmt.Sprintf("%s · %s · %.2f %s · %s", p.At.Format("02.01 15:04"), p.Status, float64(p.Amount)/100, p.Currency, p.User)))
+			rows = append(rows, []tgapi.Button{{Text: truncate(fmt.Sprintf("%s %s · %s · %s", payDot(p.Status), p.At.Format("02.01 15:04"), money(p.Amount, p.Currency), p.User), 44),
+				CallbackData: "aP:" + strconv.FormatInt(p.ID, 10) + ":" + fl + ":" + strconv.Itoa(page)}})
 		}
+		nav := []tgapi.Button{}
+		if page > 0 {
+			nav = append(nav, tgapi.Button{Text: aw.prev, CallbackData: "ap:" + fl + ":" + strconv.Itoa(page-1)})
+		}
+		if more {
+			nav = append(nav, tgapi.Button{Text: aw.next, CallbackData: "ap:" + fl + ":" + strconv.Itoa(page+1)})
+		}
+		if len(nav) > 0 {
+			rows = append(rows, nav)
+		}
+		rows = append(rows,
+			[]tgapi.Button{{Text: filterMark(fl, "", aw.payAll), CallbackData: "ap::0"}, {Text: filterMark(fl, "p", aw.payPaid), CallbackData: "ap:p:0"}},
+			[]tgapi.Button{{Text: filterMark(fl, "w", aw.payPending), CallbackData: "ap:w:0"}, {Text: filterMark(fl, "f", aw.payFailed), CallbackData: "ap:f:0"},
+				{Text: filterMark(fl, "r", aw.payRefunded), CallbackData: "ap:r:0"}},
+			home)
+		t := head("💳", aw.payments)
 		if len(ps) == 0 {
-			lines = append(lines, html.EscapeString(aw.noPayments))
+			t += "\n\n" + html.EscapeString(aw.noPayments)
+		} else {
+			t += "\n" + html.EscapeString(fmt.Sprintf(aw.page, page+1))
 		}
-		return pre + strings.Join(lines, "\n"), &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{home}}
+		return pre + t, kb(rows...)
+	case "aP": // aP:<id>:<filter>:<page>
+		parts := strings.SplitN(arg, ":", 3)
+		for len(parts) < 3 {
+			parts = append(parts, "")
+		}
+		p, err := adm.Payment(ctx, chat, atoi(parts[0]))
+		if err != nil {
+			return fail(err)
+		}
+		lines := []string{head("💳", fmt.Sprintf("%s #%d", aw.payCard, p.ID)), "",
+			html.EscapeString(payLabel(aw, p.Status)),
+			kv(aw.payKind, kindWord(aw, p.Kind)),
+			kv(aw.payAmount, money(p.Amount, p.Currency)),
+		}
+		if p.Tariff != "" {
+			lines = append(lines, kv(aw.payTariff, p.Tariff))
+		}
+		if p.TermDays > 0 {
+			lines = append(lines, kv(aw.payTerm, fmt.Sprintf("%d", p.TermDays)))
+		}
+		if p.User != "" {
+			lines = append(lines, kv(aw.payUser, p.User))
+		}
+		lines = append(lines, kv(aw.payBy, p.Provider), kv("🕒", p.At.Format("02.01.2006 15:04")))
+		if p.PaidAt > 0 {
+			lines = append(lines, kv(aw.payPaidAt, time.Unix(p.PaidAt, 0).Format("02.01.2006 15:04")))
+		}
+		if p.Error != "" {
+			lines = append(lines, kv(aw.payErr, truncate(p.Error, 200)))
+		}
+		var rows [][]tgapi.Button
+		if p.UserID != 0 {
+			rows = append(rows, []tgapi.Button{{Text: aw.payOpenUser, CallbackData: "ak:" + strconv.FormatInt(p.UserID, 10)}})
+		}
+		rows = append(rows, []tgapi.Button{{Text: aw.back, CallbackData: "ap:" + parts[1] + ":" + parts[2]}})
+		return pre + strings.Join(lines, "\n"), kb(rows...)
 	}
 	// "a": the admin's first screen
 	return pre + "<b>" + html.EscapeString(aw.title) + "</b>", b.adminHome(aw)
+}
+
+// payFilterStatus maps the filter letter in a payment list's callback to the status it asks.
+func payFilterStatus(f string) string {
+	switch f {
+	case "p":
+		return "applied"
+	case "w":
+		return "pending"
+	case "f":
+		return "failed"
+	case "r":
+		return "refunded"
+	}
+	return ""
+}
+
+// filterMark puts a dot before the filter that is on.
+func filterMark(cur, this, label string) string {
+	if cur == this {
+		return "● " + label
+	}
+	return label
+}
+
+func kindWord(aw *admWords, k string) string {
+	switch k {
+	case "new":
+		return aw.kindNew
+	case "renew":
+		return aw.kindRenew
+	case "package":
+		return aw.kindPackage
+	case "trial":
+		return aw.kindTrial
+	case "device":
+		return aw.kindDev
+	}
+	return k
+}
+
+// limitWord is a limit as a number, or the word for none.
+func limitWord(aw *admWords, n int64) string {
+	if n <= 0 {
+		return aw.unlimited
+	}
+	return strconv.FormatInt(n, 10)
 }
 
 // adminHome is the keyboard of the admin's first screen.
 func (b *Bot) adminHome(aw *admWords) *tgapi.Keyboard {
 	return &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{
 		{{Text: aw.overview, CallbackData: "ao"}, {Text: aw.users, CallbackData: "au:0"}},
-		{{Text: aw.nodes, CallbackData: "an"}, {Text: aw.payments, CallbackData: "ap"}},
+		{{Text: aw.nodes, CallbackData: "an"}, {Text: aw.payments, CallbackData: "ap::0"}},
 		{{Text: aw.broadcast, CallbackData: "ab"}},
 	}}
 }
 
 func confirm(aw *admWords, yes, no string) *tgapi.Keyboard {
-	return &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{{{Text: aw.confirm, CallbackData: yes}}, {{Text: aw.cancel, CallbackData: no}}}}
+	return &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{{{Text: aw.confirm, CallbackData: yes}, {Text: aw.cancel, CallbackData: no}}}}
 }
 
 func (b *Bot) adminCard(ctx context.Context, adm Admin, chat, id int64, aw *admWords, pre string, fail func(error) (string, *tgapi.Keyboard)) (string, *tgapi.Keyboard) {
@@ -390,49 +652,62 @@ func (b *Bot) adminCard(ctx context.Context, adm Admin, chat, id int64, aw *admW
 	if err != nil {
 		return fail(err)
 	}
+	now := b.d.Now()
 	until := aw.noTerm
 	if u.ExpiresAt > 0 {
-		until = time.Unix(u.ExpiresAt, 0).Format("02.01.2006")
+		at := time.Unix(u.ExpiresAt, 0)
+		until = at.Format("02.01.2006") + " · " + left(aw, at, now)
 	}
-	lim := "∞"
-	if u.Limit > 0 {
-		lim = gib(u.Limit)
+	devices := fmt.Sprintf("%d", u.Devices)
+	if u.DeviceLimit > 0 {
+		devices = fmt.Sprintf("%d / %d", u.Devices, u.DeviceLimit)
 	}
 	tg := aw.noTg
 	if u.TgID != 0 {
 		tg = strconv.FormatInt(u.TgID, 10)
 	}
+	tariff := aw.noTariff
+	if u.Tariff != "" {
+		tariff = u.Tariff
+	}
+	lim := aw.unlimited
+	if u.Limit > 0 {
+		lim = gib(u.Limit)
+	}
 	// The card names the subscription and what it has; it carries no link or token.
-	t := pre + "<b>" + html.EscapeString(aw.card+" «"+u.Name+"»") + "</b>\n\n" + strings.Join([]string{
-		html.EscapeString(aw.state + ": " + stateMark(u.State)), html.EscapeString(aw.until + ": " + until),
-		html.EscapeString(aw.traffic + ": " + gib(u.Used) + " / " + lim), html.EscapeString(fmt.Sprintf("%s: %d", aw.devices, u.Devices)),
-		html.EscapeString(aw.tg + ": " + tg),
-	}, "\n")
+	lines := []string{
+		head("👤", u.Name), "",
+		html.EscapeString(stateLabel(aw, u.State)), "",
+		kv(aw.until, until),
+		kv(aw.cardTariff, tariff),
+		html.EscapeString(aw.traffic+": ") + "<b>" + html.EscapeString(gib(u.Used)+" / "+lim) + "</b>",
+		"<code>" + bar(u.Used, u.Limit) + "</code>",
+		kv(aw.devices, devices),
+		kv(aw.tg, tg),
+	}
+	if u.CreatedAt > 0 {
+		lines = append(lines, kv(aw.cardSince, time.Unix(u.CreatedAt, 0).Format("02.01.2006")))
+	}
+	if u.Contact != "" {
+		lines = append(lines, kv("✉️", u.Contact))
+	}
+	if u.Note != "" {
+		lines = append(lines, "", html.EscapeString("📝 "+aw.cardNote+": ")+html.EscapeString(truncate(u.Note, 300)))
+	}
 	idS := strconv.FormatInt(id, 10)
 	blk := tgapi.Button{Text: aw.block, CallbackData: "ac:" + idS + ":1"}
 	if u.State == "disabled" {
 		blk = tgapi.Button{Text: aw.unblock, CallbackData: "ac:" + idS + ":0"}
 	}
-	return t, &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{
-		{{Text: aw.extend, CallbackData: "ad:" + idS}, blk},
+	return pre + strings.Join(lines, "\n"), &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{
+		{{Text: "+7", CallbackData: "ae:" + idS + ":7"}, {Text: "+30", CallbackData: "ae:" + idS + ":30"}, {Text: "+90", CallbackData: "ae:" + idS + ":90"},
+			{Text: aw.other, CallbackData: "ad:" + idS}},
+		{{Text: aw.traffLimit, CallbackData: "ag:" + idS}, {Text: aw.devLimit, CallbackData: "av:" + idS}},
+		{{Text: aw.resetTr, CallbackData: "ar:" + idS}, {Text: aw.reissue, CallbackData: "ai:" + idS}},
+		{{Text: aw.tariffBtn, CallbackData: "at:" + idS}, {Text: aw.noteBtn, CallbackData: "aN:" + idS}},
+		{blk, {Text: aw.delBtn, CallbackData: "ax:" + idS}},
 		{{Text: aw.back, CallbackData: "au:0"}},
 	}}
-}
-
-func stateMark(s string) string {
-	switch s {
-	case "active":
-		return "🟢 active"
-	case "expiring":
-		return "🟡 expiring"
-	case "expired":
-		return "🔴 expired"
-	case "limited":
-		return "🟠 limited"
-	case "disabled":
-		return "⛔ disabled"
-	}
-	return s
 }
 
 func gib(b int64) string { return fmt.Sprintf("%.1f GB", float64(b)/(1<<30)) }
