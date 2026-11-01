@@ -60,6 +60,7 @@ func TestPlainText(t *testing.T) {
 func TestSetChatCommandsIsScopedToOneChat(t *testing.T) {
 	var got map[string]any
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = nil // each call is read alone
 		_ = json.NewDecoder(r.Body).Decode(&got)
 		_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "result": true})
 	}))
