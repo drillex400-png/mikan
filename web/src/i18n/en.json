@@ -324,6 +324,8 @@
       "exit_too_long": "The chain of nodes would be too long: at most 8 hops",
       "exit_off": "That node is off",
       "exit_not_found": "Pick the exit node",
+      "ru_direct_one_target": "Name one: an inbound or the relay",
+      "ru_direct_no_exit": "The mode is for traffic that leaves through another node",
       "relay_no_port": "The exit node has no free port for the relay",
       "node_in_use": "The node cannot go yet. Switch this first:",
       "node_in_use_telegram": "the bot's route to Telegram (the Telegram tab)",

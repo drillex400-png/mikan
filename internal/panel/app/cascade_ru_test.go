@@ -53,14 +53,14 @@ func TestRUDirectOverHTTP(t *testing.T) {
 
 	// No exit yet: nothing to split.
 	resp, body = h.do(http.MethodPut, ru, map[string]any{"inbound": mine.Name, "on": true}, csrf)
-	if resp.StatusCode != http.StatusUnprocessableEntity || !strings.Contains(string(body), "no_exit") {
+	if resp.StatusCode != http.StatusUnprocessableEntity || !strings.Contains(string(body), "ru_direct_no_exit") {
 		t.Fatalf("no exit: %d %s", resp.StatusCode, body)
 	}
 	// The relay of a node nobody leaves through, no target, both targets, an unknown inbound.
 	if resp, body = h.do(http.MethodPut, ru, map[string]any{"relay": true, "on": true}, csrf); resp.StatusCode != http.StatusUnprocessableEntity {
 		t.Fatalf("relay with no exit: %d %s", resp.StatusCode, body)
 	}
-	if resp, body = h.do(http.MethodPut, ru, map[string]any{"on": true}, csrf); resp.StatusCode != http.StatusUnprocessableEntity || !strings.Contains(string(body), "name_one_target") {
+	if resp, body = h.do(http.MethodPut, ru, map[string]any{"on": true}, csrf); resp.StatusCode != http.StatusUnprocessableEntity || !strings.Contains(string(body), "ru_direct_one_target") {
 		t.Fatalf("no target: %d %s", resp.StatusCode, body)
 	}
 	if resp, body = h.do(http.MethodPut, ru, map[string]any{"inbound": mine.Name, "relay": true, "on": true}, csrf); resp.StatusCode != http.StatusUnprocessableEntity {

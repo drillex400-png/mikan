@@ -106,7 +106,7 @@ func (h *handlers) setRUDirect(ctx context.Context, in *ruDirectPutInput) (*ruDi
 	}
 	b := in.Body
 	if b.Relay == (b.Inbound != "") {
-		return nil, huma.Error422UnprocessableEntity("ru_direct", &huma.ErrorDetail{Location: "body.inbound", Message: "name_one_target"})
+		return nil, fieldErr("body.inbound", "ru_direct_one_target")
 	}
 	target := "relay"
 	err := h.d.Store.Tx(ctx, func(q *db.Queries) error {
@@ -145,9 +145,9 @@ func (h *handlers) setRUDirect(ctx context.Context, in *ruDirectPutInput) (*ruDi
 	})
 	switch {
 	case errors.Is(err, errNoExit):
-		return nil, huma.Error422UnprocessableEntity("ru_direct", &huma.ErrorDetail{Location: "body.inbound", Message: "no_exit"})
+		return nil, fieldErr("body.inbound", "ru_direct_no_exit")
 	case errors.Is(err, sql.ErrNoRows):
-		return nil, huma.Error404NotFound("inbound")
+		return nil, huma.Error404NotFound("not_found")
 	case err != nil:
 		return nil, err
 	}
@@ -168,7 +168,7 @@ type ruRefreshOutput struct{ Body RUData }
 
 func (h *handlers) refreshRUGeodata(ctx context.Context, _ *struct{}) (*ruRefreshOutput, error) {
 	if h.d.GeoData == nil {
-		return nil, huma.Error404NotFound("geodata")
+		return nil, huma.Error404NotFound("not_found")
 	}
 	if err := h.d.GeoData.Refresh(ctx); err != nil {
 		return &ruRefreshOutput{Body: RUData{Error: err.Error()}}, nil
