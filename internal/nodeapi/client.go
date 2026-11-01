@@ -173,6 +173,33 @@ func (c *Client) PresentChallenge(ctx context.Context, token, keyAuth string) er
 	return c.do(ctx, http.MethodPut, "/v1/acme/challenge/"+url.PathEscape(token), ChallengeRequest{KeyAuth: keyAuth}, nil, 15*time.Second)
 }
 
+// PutGeodata hands the node a database of the "Russia direct" cascade mode (name "geoip" or
+// "geosite", the file as v2ray's .dat). The node reads it before it keeps it: a file that
+// does not is *Error{Code: "geodata_invalid"}. Nodes that predate it answer 404.
+func (c *Client) PutGeodata(ctx context.Context, name string, data []byte) error {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+	path := "/v1/geodata/" + url.PathEscape(name)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, c.base+path, bytes.NewReader(data))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/octet-stream")
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrUnavailable, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		var e Error
+		if json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&e) == nil && e.Code != "" {
+			return &e
+		}
+		return &StatusError{Method: http.MethodPut, Path: path, Status: resp.StatusCode}
+	}
+	return nil
+}
+
 // CleanUpChallenge stops answering token; the node gives port 80 back once none is left.
 func (c *Client) CleanUpChallenge(ctx context.Context, token string) error {
 	return c.do(ctx, http.MethodDelete, "/v1/acme/challenge/"+url.PathEscape(token), nil, nil, 15*time.Second)

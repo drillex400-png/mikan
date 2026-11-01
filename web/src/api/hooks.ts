@@ -34,6 +34,7 @@ export const qk = {
   telegramBackup: ["telegram-backup"] as const,
   warp: (node: number) => ["warp", node] as const,
   cascade: (node: number) => ["cascade", node] as const,
+  ruDirect: (node: number) => ["ruDirect", node] as const,
   pools: ["pools"] as const,
   userPools: (id: number) => ["users", "pools", id] as const,
   packages: ["packages"] as const,

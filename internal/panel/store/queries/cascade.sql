@@ -27,3 +27,21 @@ SELECT * FROM relay_users WHERE exit_node_id = $1 ORDER BY src_node_id;
 
 -- name: SetInboundExit :exec
 UPDATE inbounds SET exit_node_id = $1, outbound = $2 WHERE id = $3;
+
+-- name: ListRUDirectInbounds :many
+SELECT inbound_id FROM cascade_ru_direct WHERE inbound_id IS NOT NULL;
+
+-- name: ListRUDirectRelays :many
+SELECT relay_node_id FROM cascade_ru_direct WHERE relay_node_id IS NOT NULL;
+
+-- name: SetInboundRUDirect :exec
+INSERT INTO cascade_ru_direct (inbound_id) VALUES ($1) ON CONFLICT (inbound_id) WHERE inbound_id IS NOT NULL DO NOTHING;
+
+-- name: ClearInboundRUDirect :exec
+DELETE FROM cascade_ru_direct WHERE inbound_id = $1;
+
+-- name: SetRelayRUDirect :exec
+INSERT INTO cascade_ru_direct (relay_node_id) VALUES ($1) ON CONFLICT (relay_node_id) WHERE relay_node_id IS NOT NULL DO NOTHING;
+
+-- name: ClearRelayRUDirect :exec
+DELETE FROM cascade_ru_direct WHERE relay_node_id = $1;

@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/metacubex/mihomo/component/eventbus"
+	"github.com/metacubex/mihomo/component/geodata"
 	C "github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/hub/executor"
 	"github.com/metacubex/mihomo/listener"
@@ -219,6 +220,10 @@ func Start(o Options) (*Engine, error) {
 		Challenge: acmechallenge.New(cmp.Or(o.ACMEListen, acmechallenge.DefaultListen)),
 	}
 	go e.pumpLogs()
+	// The rules of the "Russia direct" mode read geoip.dat and geosite.dat from home. With
+	// the mode off the core would look for a MMDB instead and stop the node without one.
+	geodata.SetGeodataMode(true)
+	e.loadGeo()
 
 	cs, err := loadCounters(filepath.Join(dataDir, countersFile), log)
 	if err != nil {

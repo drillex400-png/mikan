@@ -324,6 +324,8 @@
       "exit_too_long": "The chain of nodes would be too long: at most 8 hops",
       "exit_off": "That node is off",
       "exit_not_found": "Pick the exit node",
+      "ru_direct_one_target": "Name one: an inbound or the relay",
+      "ru_direct_no_exit": "The mode is for traffic that leaves through another node",
       "relay_no_port": "The exit node has no free port for the relay",
       "node_in_use": "The node cannot go yet. Switch this first:",
       "node_in_use_telegram": "the bot's route to Telegram (the Telegram tab)",
@@ -3095,6 +3097,22 @@
     "deleted": "WARP deleted"
   },
   "cascade": {
+    "ruDirect": {
+      "title": "Russia direct",
+      "intro": "Traffic to Russian sites and addresses leaves from this node; only the rest goes on to the far exit. Russian services see a Russian IP and stay fast.",
+      "inbound": "Inbound “{name}”",
+      "inboundSub": "Russian sites from this node, the rest through {exit}",
+      "relay": "Other nodes' traffic through this one",
+      "relaySub": "Russian sites from this node, the rest further down the chain",
+      "none": "Nothing to turn on: no inbound leaves through another node.",
+      "geoNone": "The Russian address databases are not downloaded yet. The mode starts working once they are.",
+      "geoOk": "Russian address databases: updated {when}",
+      "geoErr": "The databases did not download: {error}",
+      "geoRefresh": "Download now",
+      "geoRefreshed": "Databases updated",
+      "saved": "Saved",
+      "noExit": "This inbound has no exit through another node"
+    },
     "title": "Cascade",
     "intro": "A client connects to the near server and leaves to the internet through the far one. Sites see the far one's address.",
     "exits": "This node sends traffic out through",

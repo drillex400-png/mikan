@@ -32,6 +32,7 @@ import (
 	"mikan/internal/panel/domain"
 	"mikan/internal/panel/events"
 	"mikan/internal/panel/events/feed"
+	"mikan/internal/panel/geosync"
 	"mikan/internal/panel/infraalerts"
 	"mikan/internal/panel/ipgeo"
 	"mikan/internal/panel/model"
@@ -65,6 +66,8 @@ type Panel struct {
 	Tuner  *autotune.Tuner // nil without nodes
 	// NodeUpdates updates the remote nodes to the panel's version; nil without nodes.
 	NodeUpdates *nodeupdate.Service
+	// Geo holds the databases of the "Russia direct" cascade mode and sends them to nodes.
+	Geo *geosync.Service
 	// Gateway is the panel's side of Telegram: the token, polling, Stars, the alerts' way
 	// out; Telegram is the admin's setup of the bot, its notices and broadcasts on top of it.
 	Gateway  *tgate.Gateway
@@ -196,6 +199,10 @@ func NewPanel(st *store.Store, o Options) (*Panel, error) {
 	if o.Connect != nil {
 		p.Nodes = nodesync.NewManager(st, set, pool, o.Connect, o.Log, o.Now)
 		p.Nodes.SetEvents(hub)
+		if o.DataDir != "" {
+			p.Geo = geosync.New(o.DataDir, o.Log, o.Now)
+			p.Nodes.SetGeo(p.Geo)
+		}
 		changes = p.Nodes
 		deps.Online = p.Nodes.Online
 		deps.Nodes = p.Nodes
@@ -280,6 +287,10 @@ func NewPanel(st *store.Store, o Options) (*Panel, error) {
 	deps.Pages = addonPages
 	deps.DNS = o.DNS
 	deps.Reach, deps.Geo = o.Reach, o.Geo
+	if p.Geo != nil {
+		// Only when it exists: a nil *Service in the interface would not be nil.
+		deps.GeoData = p.Geo
+	}
 	deps.DataDir = o.DataDir
 	deps.Logs, deps.Host = o.Logs, hostchan.New(o.DataDir)
 	promos := promo.New(st, o.Now)
@@ -619,6 +630,9 @@ func (p *Panel) Run(ctx context.Context) {
 	}
 	if p.NodeUpdates != nil {
 		workers = append(workers, p.NodeUpdates.Run)
+	}
+	if p.Geo != nil {
+		workers = append(workers, p.Geo.Run)
 	}
 	workers = append(workers, p.Gateway.Run, p.Telegram.Run, p.Billing.Run, p.AddonsAPI.Run, p.AddonsAPI.RunPush, (&botAddon{p: p}).Run, p.Updates.Run, p.Alerts.Run, p.Backups.Run, p.Importer.Run,
 		func(ctx context.Context) {

@@ -70,6 +70,7 @@ type Syncer struct {
 	failedKey   string    // the state key the last failed Apply was for
 	retry       retry     // the pace of attempts at a node that does not answer
 	badInbounds string    // the inbounds left out of the state, as last logged
+	geoErr      string    // why "Russia direct" was left out of the state, as last logged
 
 	// Only the counters loop touches these.
 	counterFails int       // consecutive failed pulls
@@ -277,12 +278,50 @@ func (s *Syncer) desiredPin(ctx context.Context) (st nodeapi.DesiredState, pin s
 	return st, pin, nil
 }
 
+// geodata makes sure the node holds the databases of the "Russia direct" mode when the state
+// asks for it. When it cannot (no source, the fetch failed, the node refused a file, an
+// older node), the mode is left out of the state: the inbound goes to its exit whole, as it
+// did before the mode, and the reason is logged once per change. A state with the mode off
+// never touches the source.
+func (s *Syncer) geodata(ctx context.Context, st *nodeapi.DesiredState) {
+	want := false
+	for _, e := range st.Exits {
+		if len(e.RUDirect) > 0 {
+			want = true
+		}
+	}
+	if !want {
+		return
+	}
+	var err error
+	if s.m.geo == nil {
+		err = errors.New("no geodata source")
+	} else {
+		err = s.m.geo.Ensure(ctx, s.m, s.id)
+	}
+	if err == nil {
+		return
+	}
+	s.mu.Lock()
+	msg := err.Error()
+	changed := msg != s.geoErr
+	s.geoErr = msg
+	s.mu.Unlock()
+	if changed {
+		s.log.Warn("russia-direct is off on this node: no geodata", "err", err)
+	}
+	for i := range st.Exits {
+		st.Exits[i].RUDirect = nil
+	}
+}
+
 func (s *Syncer) applyState(ctx context.Context) {
 	st, pin, err := s.desiredPin(ctx)
 	if err != nil {
 		s.log.Error("build node state", "err", err)
 		return
 	}
+	s.geodata(ctx, &st)
 	key := stateKey(st)
 	now := s.m.now()
 	s.mu.Lock()
@@ -341,6 +380,10 @@ func (s *Syncer) applyState(ctx context.Context) {
 	s.mu.Unlock()
 	if recovered {
 		s.log.Info("node answers again")
+		// It may have been reinstalled while away: it is sent its databases again.
+		if s.m.geo != nil {
+			s.m.geo.Forget(s.id)
+		}
 	}
 	s.log.Info("node state applied", "revision", rev, "recreated", res.Recreated)
 	// The node serves this certificate now: links may follow it (drop the pin for a public
@@ -978,6 +1021,30 @@ func (s *Syncer) cascade(ctx context.Context, n db.Node, inbounds []db.Inbound) 
 	if relay != nil && own.ExitNodeID.Valid {
 		add(own.ExitNodeID.Int64, nodeapi.RelayListener)
 	}
+	// Where the traffic to Russian sites stays on this node (cascade_ru_direct).
+	ruIn, err := q.ListRUDirectInbounds(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	ruRelay, err := q.ListRUDirectRelays(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	ruName := map[string]bool{}
+	byID := map[int64]string{}
+	for _, in := range inbounds {
+		byID[in.ID] = in.Name
+	}
+	for _, id := range ruIn {
+		if name, ok := byID[id.Int64]; ok && id.Valid {
+			ruName[name] = true
+		}
+	}
+	for _, id := range ruRelay {
+		if id.Valid && id.Int64 == n.ID {
+			ruName[nodeapi.RelayListener] = true
+		}
+	}
 	var exits []nodeapi.Exit
 	for _, id := range order {
 		e, err := s.exitTo(ctx, n.ID, id)
@@ -987,6 +1054,11 @@ func (s *Syncer) cascade(ctx context.Context, n db.Node, inbounds []db.Inbound) 
 			e = nodeapi.Exit{Name: nodeapi.ExitName(id), Proxy: unreachableExit(id)}
 		}
 		e.Inbounds = routes[id]
+		for _, name := range e.Inbounds {
+			if ruName[name] {
+				e.RUDirect = append(e.RUDirect, name)
+			}
+		}
 		exits = append(exits, e)
 	}
 	return relay, exits, nil

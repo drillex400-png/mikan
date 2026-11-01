@@ -57,6 +57,8 @@ type Manager struct {
 	log     *slog.Logger
 	now     func() time.Time
 
+	geo GeoSource
+
 	nodesDirty chan struct{}
 	hub        *events.Hub // woken after a node was told down or up (liveness.go); nil: no one waits
 
@@ -113,6 +115,18 @@ func NewManager(st *store.Store, set *settings.Settings, pool *domain.Pool, conn
 	return &Manager{st: st, set: set, pool: pool, connect: connect, log: log, now: now,
 		nodesDirty: make(chan struct{}, 1), running: map[int64]*running{}, batches: map[int64]uint64{}, storeInterval: storeEvery}
 }
+
+// GeoSource hands a node the databases of the "Russia direct" cascade mode (geosync).
+type GeoSource interface {
+	Ensure(ctx context.Context, p interface {
+		PutGeodata(ctx context.Context, id int64, name string, data []byte) error
+	}, id int64) error
+	Forget(id int64)
+}
+
+// SetGeo connects the source of the mode's databases; call it before Run. Without one the
+// mode stays off on every node.
+func (m *Manager) SetGeo(g GeoSource) { m.geo = g }
 
 // SetEvents connects the hub that wakes the addons reading the feed; call it before Run.
 func (m *Manager) SetEvents(h *events.Hub) { m.hub = h }
@@ -358,6 +372,19 @@ func (m *Manager) RequestUpdate(ctx context.Context, id int64, version string) e
 		return err
 	}
 	return c.RequestUpdate(ctx, version)
+}
+
+// PutGeodata hands a node a database of the "Russia direct" cascade mode. The local node
+// and nodes that predate it have no such method: that is the caller's to read as "not
+// here", never as a failure of the node.
+func (m *Manager) PutGeodata(ctx context.Context, id int64, name string, data []byte) error {
+	c, err := clientOf[interface {
+		PutGeodata(context.Context, string, []byte) error
+	}](m, id)
+	if err != nil {
+		return err
+	}
+	return c.PutGeodata(ctx, name, data)
 }
 
 // Activity reports which inbounds of a node each device reached lately.

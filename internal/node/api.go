@@ -116,6 +116,25 @@ func Handler(e *Engine, log *slog.Logger) http.Handler {
 			w.WriteHeader(http.StatusNoContent)
 		}
 	})
+	// The geodata of the "Russia direct" cascade mode: the panel sends each database whole,
+	// the node reads it before keeping it. Nodes that predate it answer 404.
+	mux.HandleFunc("PUT /v1/geodata/{name}", func(w http.ResponseWriter, r *http.Request) {
+		data, err := io.ReadAll(http.MaxBytesReader(w, r.Body, MaxGeodata))
+		if err != nil {
+			writeJSON(w, http.StatusRequestEntityTooLarge, nodeapi.Error{Code: "too_large", Message: "the database is too large"})
+			return
+		}
+		switch err := e.PutGeodata(r.PathValue("name"), data); {
+		case errors.Is(err, ErrGeodataName):
+			writeJSON(w, http.StatusNotFound, nodeapi.Error{Code: "bad_request", Message: "no such database"})
+		case errors.Is(err, ErrGeodataBad):
+			writeJSON(w, http.StatusUnprocessableEntity, nodeapi.Error{Code: "geodata_invalid", Message: err.Error()})
+		case err != nil:
+			fail(w, log, err)
+		default:
+			w.WriteHeader(http.StatusNoContent)
+		}
+	})
 	mux.HandleFunc("DELETE /v1/acme/challenge/{token}", func(w http.ResponseWriter, r *http.Request) {
 		e.Challenge.CleanUp(r.PathValue("token"))
 		w.WriteHeader(http.StatusNoContent)

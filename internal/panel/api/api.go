@@ -28,6 +28,7 @@ import (
 	"mikan/internal/panel/certcheck"
 	"mikan/internal/panel/dnscheck"
 	"mikan/internal/panel/domain"
+	"mikan/internal/panel/geosync"
 	"mikan/internal/panel/ipgeo"
 	"mikan/internal/panel/nodesync"
 	"mikan/internal/panel/nodeupdate"
@@ -143,6 +144,11 @@ type Deps struct {
 	DNS *dnscheck.Checker
 	// Reach checks ports of a node or any server from Russia (Globalping); nil: not offered.
 	Reach *reach.Client
+	// GeoData holds the databases of the "Russia direct" cascade mode; nil: not offered.
+	GeoData interface {
+		Status() geosync.Status
+		Refresh(ctx context.Context) error
+	}
 	// Geo asks public geo bases which country an address is in; nil: not offered.
 	Geo *ipgeo.Client
 	// DataDir is the panel's data directory, whose disk "Check server" looks at; "": none.
@@ -317,6 +323,7 @@ func New(d Deps) (http.Handler, huma.API, error) {
 	h.registerNodes()
 	h.registerNodeChecks()
 	h.registerGeo()
+	h.registerRUDirect()
 	h.registerTorrent()
 	h.registerFilters()
 	h.registerExitDNS()

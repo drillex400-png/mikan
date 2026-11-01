@@ -7325,6 +7325,50 @@
         ],
         "type": "object"
       },
+      "RUData": {
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "description": "Почему базы не скачались; режим не включается на ноде, пока их нет",
+            "type": "string"
+          },
+          "fetched_at": {
+            "type": "string"
+          },
+          "have": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "have"
+        ],
+        "type": "object"
+      },
+      "RUDirectView": {
+        "additionalProperties": false,
+        "properties": {
+          "geodata": {
+            "$ref": "#/components/schemas/RUData",
+            "description": "Базы GeoIP и GeoSite, из которых нода узнаёт российские адреса"
+          },
+          "inbounds": {
+            "description": "Подключения этой ноды, у которых включён режим «РФ напрямую»",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "relay": {
+            "description": "Включён ли режим у служебного входа (трафик других нод, идущий дальше через эту)",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "inbounds",
+          "relay"
+        ],
+        "type": "object"
+      },
       "ReachCheck": {
         "additionalProperties": false,
         "properties": {
@@ -7976,6 +8020,27 @@
         },
         "required": [
           "profile"
+        ],
+        "type": "object"
+      },
+      "RuDirectPutInputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "inbound": {
+            "description": "Имя подключения ноды; пусто: служебный вход",
+            "maxLength": 128,
+            "type": "string"
+          },
+          "on": {
+            "type": "boolean"
+          },
+          "relay": {
+            "description": "Переключить служебный вход вместо подключения",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "on"
         ],
         "type": "object"
       },
@@ -12550,6 +12615,38 @@
         ]
       }
     },
+    "/api/v1/cascade/ru-direct/geodata": {
+      "post": {
+        "operationId": "refresh-ru-geodata",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RUData"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Скачать базы для «РФ напрямую» сейчас",
+        "tags": [
+          "node"
+        ],
+        "x-session-only": true
+      }
+    },
     "/api/v1/exit-dns": {
       "get": {
         "operationId": "get-exit-dns",
@@ -14169,6 +14266,101 @@
           }
         },
         "summary": "Куда нода выпускает трафик других нод",
+        "tags": [
+          "node"
+        ],
+        "x-session-only": true
+      }
+    },
+    "/api/v1/nodes/{id}/cascade/ru-direct": {
+      "get": {
+        "operationId": "get-node-ru-direct",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RUDirectView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Каскад: режим «РФ напрямую»",
+        "tags": [
+          "node"
+        ]
+      },
+      "put": {
+        "operationId": "set-node-ru-direct",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuDirectPutInputBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RUDirectView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Каскад: включить или выключить «РФ напрямую»",
         "tags": [
           "node"
         ],
