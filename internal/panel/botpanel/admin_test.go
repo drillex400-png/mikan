@@ -3,8 +3,10 @@ package botpanel
 import (
 	"context"
 	"errors"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"mikan/internal/panel/model"
 	"mikan/internal/panel/settings"
@@ -186,4 +188,107 @@ func TestAdminReads(t *testing.T) {
 	if _, err := a.Payments(ctx, adminTg); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// The whole way, as the addon takes it: Telegram, the bot, the RPC, the panel. A subscriber's
+// /admin does nothing admin; an admin's opens the screens, and a change goes through a
+// confirmation and lands in the log.
+func TestAdminThroughTheBot(t *testing.T) {
+	e := setup(t)
+	const anna, boss = 555, adminTg
+	setAdmins(t, e, boss)
+
+	// a subscriber: /admin is an ordinary text, nothing of the admin's is shown
+	from := e.tg.count()
+	e.say(anna, "/admin")
+	cs := e.tg.until(t, from, func(cs []call) bool { return len(cs) > 0 })
+	time.Sleep(200 * time.Millisecond)
+	for _, c := range e.tg.calls[from:] {
+		if strings.Contains(text(c), "Администрирование") || strings.Contains(strings.Join(vals(buttons(c)), " "), "ao") {
+			t.Fatalf("a subscriber got the admin's screen: %v", c.body)
+		}
+		if c.method == "setMyCommands" {
+			t.Fatalf("a subscriber's command menu was touched: %v", c.body)
+		}
+	}
+	_ = cs
+
+	// an admin: /admin opens the first screen, and the command menu of that chat lists it
+	from = e.tg.count()
+	e.say(boss, "/admin")
+	got := e.tg.until(t, from, func(cs []call) bool {
+		_, sent := find(cs, "sendMessage")
+		_, menu := find(cs, "setMyCommands")
+		return sent && menu
+	})
+	m, _ := find(got, "sendMessage")
+	if !strings.Contains(text(m), "Администрирование") {
+		t.Fatalf("the admin's first screen: %q", text(m))
+	}
+	if b := buttons(m); b["📊 Сводка"] != "ao" || b["👥 Клиенты"] != "au:0" {
+		t.Fatalf("the admin's buttons: %v", b)
+	}
+	cmds, _ := find(got, "setMyCommands")
+	if sc, _ := cmds.body["scope"].(map[string]any); sc["chat_id"] != float64(boss) {
+		t.Fatalf("the menu is not scoped to the admin's chat: %v", cmds.body)
+	}
+
+	// the card of a subscription, then a block that asks first
+	const adminMsg = 9001
+	uid := strconv.FormatInt(e.user.ID, 10)
+	shown := func(data string) call {
+		t.Helper()
+		from := e.tg.count()
+		e.press(boss, adminMsg, data)
+		cs := e.tg.until(t, from, func(cs []call) bool { _, ok := find(cs, "editMessageText"); return ok })
+		c, _ := find(cs, "editMessageText")
+		return c
+	}
+	if c := shown("ao"); !strings.Contains(text(c), "Сводка") {
+		t.Fatalf("overview: %q", text(c))
+	}
+	card := shown("ak:" + uid)
+	if strings.Contains(text(card), "http") || strings.Contains(text(card), e.user.SubToken) {
+		t.Fatalf("the card carries a link or a token: %q", text(card))
+	}
+	if b := buttons(card); b["⛔ Заблокировать"] != "ac:"+uid+":1" {
+		t.Fatalf("the card's buttons: %v", b)
+	}
+	// asking changes nothing
+	ask := shown("ac:" + uid + ":1")
+	if b := buttons(ask); b["Да, подтверждаю"] != "az:b:"+uid+":1" {
+		t.Fatalf("the confirmation: %v", b)
+	}
+	if v, _ := e.local.Admin().User(e.ctx, boss, e.user.ID); v.State == "disabled" {
+		t.Fatalf("a question blocked the subscription: %+v", v)
+	}
+	// confirming does, and says who did it
+	shown("az:b:" + uid + ":1")
+	if v, err := e.local.Admin().User(e.ctx, boss, e.user.ID); err != nil || v.State != "disabled" {
+		t.Fatalf("after the confirmation: %+v %v", v, err)
+	}
+	if !strings.Contains(strings.Join(auditActions(t, e), ","), "tgadmin.disable") {
+		t.Fatal("the block is not in the log")
+	}
+
+	// a subscriber who knows the codes presses them: nothing of the admin's happens
+	from = e.tg.count()
+	e.press(anna, 9002, "az:b:"+uid+":0")
+	time.Sleep(300 * time.Millisecond)
+	if v, _ := e.local.Admin().User(e.ctx, boss, e.user.ID); v.State != "disabled" {
+		t.Fatalf("a subscriber unblocked the subscription: %+v", v)
+	}
+	for _, c := range e.tg.calls[from:] {
+		if strings.Contains(text(c), "Готово") || strings.Contains(text(c), "Подписка «") {
+			t.Fatalf("a subscriber was shown an admin's answer: %q", text(c))
+		}
+	}
+}
+
+func vals(m map[string]string) []string {
+	out := make([]string, 0, len(m))
+	for _, v := range m {
+		out = append(out, v)
+	}
+	return out
 }
