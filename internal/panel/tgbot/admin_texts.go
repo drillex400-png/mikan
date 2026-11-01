@@ -14,6 +14,8 @@ type admWords struct {
 	extend, block, unblock, confirm, cancel, done            string
 	daysAsk, daysBad, askExtend, askBlock, askUnblock        string
 	nodeOn, nodeOff, noNodes, noPayments                     string
+	broadcast, bcAsk, bcBad, bcPreview, bcAsk2, bcSend       string
+	bcSent, bcBusy, bcOff, bcNone, bcGone                    string
 }
 
 var admRU = admWords{
@@ -36,6 +38,12 @@ var admRU = admWords{
 	askBlock:   "Заблокировать подписку «%s»?",
 	askUnblock: "Разблокировать подписку «%s»?",
 	nodeOn:     "работает", nodeOff: "выключен", noNodes: "Серверов нет.", noPayments: "Платежей нет.",
+	broadcast: "📣 Рассылка", bcAsk: "Пришлите текст рассылки. Markdown работает, как в панели. До %d символов.",
+	bcBad: "Текст пустой или длиннее %d символов. Пришлите другой.", bcPreview: "Так увидят клиенты:",
+	bcAsk2: "Получателей: %d. Отправить? Остановить рассылку после отправки нельзя.", bcSend: "Да, отправить",
+	bcSent: "Рассылка поставлена в очередь. Получателей: %d. Ход виден в панели.", bcBusy: "Предыдущая рассылка ещё отправляется. Подождите.",
+	bcOff: "Бот выключен, отправить некому.", bcNone: "Получателей нет: подписок с привязанным Telegram пока нет.",
+	bcGone: "Текст рассылки потерялся (бот перезапускался). Пришлите его заново.",
 }
 
 var admEN = admWords{
@@ -58,6 +66,12 @@ var admEN = admWords{
 	askBlock:   "Block subscription “%s”?",
 	askUnblock: "Unblock subscription “%s”?",
 	nodeOn:     "up", nodeOff: "off", noNodes: "No servers.", noPayments: "No payments.",
+	broadcast: "📣 Broadcast", bcAsk: "Send the broadcast text. Markdown works as in the panel. Up to %d characters.",
+	bcBad: "The text is empty or longer than %d characters. Send another.", bcPreview: "This is what clients will see:",
+	bcAsk2: "Recipients: %d. Send it? A broadcast cannot be stopped once sent.", bcSend: "Yes, send",
+	bcSent: "The broadcast is queued. Recipients: %d. The panel shows its progress.", bcBusy: "The previous broadcast is still being sent. Wait.",
+	bcOff: "The bot is off, there is no one to send it.", bcNone: "No recipients: no subscription has a linked Telegram yet.",
+	bcGone: "The broadcast text was lost (the bot restarted). Send it again.",
 }
 
 func admWordsFor(lang string) *admWords { return textutil.ByLang(lang, &admRU, &admEN) }

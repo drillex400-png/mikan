@@ -16,6 +16,10 @@ var (
 	ErrNotAdmin = errors.New("not_admin")
 	// ErrAdminInput: an admin action asked for something out of its bounds.
 	ErrAdminInput = errors.New("admin_input")
+	// ErrBroadcastBusy: an admin's broadcast is still being sent; ErrBroadcastOff: the bot
+	// is off, so there is no one to send it.
+	ErrBroadcastBusy = errors.New("broadcast_busy")
+	ErrBroadcastOff  = errors.New("broadcast_off")
 	// ErrLinkLimit: the account holds MaxLinks subscriptions already.
 	ErrLinkLimit = errors.New("max_links")
 	// ErrNotChannel: the channel check was asked about a chat that is not the bot's channel.
@@ -142,6 +146,8 @@ var codes = []struct {
 	{"promo_unavailable", ErrPromo},
 	{"not_admin", ErrNotAdmin},
 	{"admin_input", ErrAdminInput},
+	{"broadcast_busy", ErrBroadcastBusy},
+	{"broadcast_off", ErrBroadcastOff},
 	{"context_canceled", context.Canceled},
 	{"deadline_exceeded", context.DeadlineExceeded},
 }

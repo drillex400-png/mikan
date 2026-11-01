@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"mikan/internal/panel/model"
 	"mikan/internal/tgapi"
@@ -19,7 +20,7 @@ import (
 
 // adminState is what the bot waits for from one admin's next message.
 type adminState struct {
-	kind  string // "search" or "days"
+	kind  string // "search", "days" or "broadcast"
 	user  int64  // for "days": the subscription
 	query string
 }
@@ -28,6 +29,7 @@ type adminMem struct {
 	wait   map[int64]adminState // by the admin's chat
 	query  map[int64]string     // each admin's last search, for the pages
 	listed map[int64]string     // the chats whose command menu lists /admin, and in which language
+	draft  map[int64]string     // each admin's broadcast text, held until it is confirmed
 }
 
 // adminAccess says whether the admin screens exist for this account and give the helpers.
@@ -49,6 +51,28 @@ func (b *Bot) setWait(chat int64, s adminState) {
 		b.adm.wait = map[int64]adminState{}
 	}
 	b.adm.wait[chat] = s
+}
+
+func (b *Bot) setDraft(chat int64, text string) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.adm.draft == nil {
+		b.adm.draft = map[int64]string{}
+	}
+	b.adm.draft[chat] = text
+}
+
+func (b *Bot) draftOf(chat int64) (string, bool) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	t, ok := b.adm.draft[chat]
+	return t, ok
+}
+
+func (b *Bot) dropDraft(chat int64) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	delete(b.adm.draft, chat)
 }
 
 func (b *Bot) takeWait(chat int64) (adminState, bool) {
@@ -86,6 +110,14 @@ func (b *Bot) adminMessage(ctx context.Context, m *tgapi.Message) bool {
 	case "search":
 		b.adm.setQuery(b, chat, text)
 		b.adminDraw(chat, 0, "au:0", "")
+	case "broadcast":
+		if n := utf8.RuneCountInString(text); n == 0 || n > MaxBroadcast {
+			b.setWait(chat, st)
+			b.adminDraw(chat, 0, "ab", fmt.Sprintf(aw.bcBad, MaxBroadcast))
+			return true
+		}
+		b.setDraft(chat, text)
+		b.adminDraw(chat, 0, "ab:p", "")
 	case "days":
 		n, err := strconv.ParseInt(text, 10, 64)
 		if err != nil || n < 1 || n > MaxAdminDays {
@@ -135,7 +167,7 @@ func (b *Bot) adminPress(ctx context.Context, chat, msg int64, data string) bool
 	// Exactly the admin's codes, nothing that merely starts with "a" (the subscribers' "app").
 	cmd, _, _ := strings.Cut(data, ":")
 	switch cmd {
-	case "a", "ao", "au", "an", "ap", "ac", "ae", "ak", "ad", "as", "az":
+	case "a", "ao", "au", "an", "ap", "ac", "ae", "ak", "ad", "as", "az", "ab":
 	default:
 		return false
 	}
@@ -246,6 +278,23 @@ func (b *Bot) adminScreen(ctx context.Context, chat int64, data, notice string) 
 		}
 		return pre + html.EscapeString(fmt.Sprintf(ask, u.Name)), confirm(aw, "az:b:"+idS+":"+flag, "ak:"+idS)
 	case "az": // the confirmed change
+		if arg == "m" { // the broadcast: its text is the one held for this admin, once
+			text, ok := b.draftOf(chat)
+			b.dropDraft(chat)
+			if !ok {
+				return pre + html.EscapeString(aw.bcGone), &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{{{Text: aw.broadcast, CallbackData: "ab"}}, home}}
+			}
+			n, err := adm.Broadcast(ctx, chat, text)
+			switch {
+			case errors.Is(err, model.ErrBroadcastBusy):
+				return pre + html.EscapeString(aw.bcBusy), &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{home}}
+			case errors.Is(err, model.ErrBroadcastOff):
+				return pre + html.EscapeString(aw.bcOff), &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{home}}
+			case err != nil:
+				return fail(err)
+			}
+			return pre + html.EscapeString(fmt.Sprintf(aw.bcSent, n)), &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{home}}
+		}
 		kind, rest, _ := strings.Cut(arg, ":")
 		idS, v, _ := strings.Cut(rest, ":")
 		id := atoi(idS)
@@ -262,6 +311,32 @@ func (b *Bot) adminScreen(ctx context.Context, chat int64, data, notice string) 
 			return fail(err)
 		}
 		return b.adminCard(ctx, adm, chat, id, aw, html.EscapeString(aw.done)+"\n\n", fail)
+	case "ab": // ab asks for the text; ab:p previews it and asks to confirm
+		if arg == "x" {
+			b.dropDraft(chat)
+			return pre + "<b>" + html.EscapeString(aw.title) + "</b>", b.adminHome(aw)
+		}
+		if arg != "p" {
+			b.dropDraft(chat)
+			b.setWait(chat, adminState{kind: "broadcast"})
+			return pre + html.EscapeString(fmt.Sprintf(aw.bcAsk, MaxBroadcast)), &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{{{Text: aw.cancel, CallbackData: "a"}}}}
+		}
+		text, ok := b.draftOf(chat)
+		if !ok {
+			return pre + html.EscapeString(aw.bcGone), &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{{{Text: aw.broadcast, CallbackData: "ab"}}, home}}
+		}
+		n, err := adm.BroadcastAudience(ctx, chat)
+		if err != nil {
+			return fail(err)
+		}
+		if n == 0 {
+			b.dropDraft(chat)
+			return pre + html.EscapeString(aw.bcNone), &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{home}}
+		}
+		// The text is shown as the clients get it: the same rendering, the same variables.
+		body := Render(text, map[string]string{"brand": BrandOf(ctx, b.d.Backend)})
+		return pre + html.EscapeString(aw.bcPreview) + "\n\n" + body + "\n\n" + html.EscapeString(fmt.Sprintf(aw.bcAsk2, n)),
+			&tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{{{Text: aw.bcSend, CallbackData: "az:m"}}, {{Text: aw.cancel, CallbackData: "ab:x"}}}}
 	case "an":
 		ns, err := adm.Nodes(ctx, chat)
 		if err != nil {
@@ -294,11 +369,16 @@ func (b *Bot) adminScreen(ctx context.Context, chat int64, data, notice string) 
 		return pre + strings.Join(lines, "\n"), &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{home}}
 	}
 	// "a": the admin's first screen
-	rows := [][]tgapi.Button{
+	return pre + "<b>" + html.EscapeString(aw.title) + "</b>", b.adminHome(aw)
+}
+
+// adminHome is the keyboard of the admin's first screen.
+func (b *Bot) adminHome(aw *admWords) *tgapi.Keyboard {
+	return &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{
 		{{Text: aw.overview, CallbackData: "ao"}, {Text: aw.users, CallbackData: "au:0"}},
 		{{Text: aw.nodes, CallbackData: "an"}, {Text: aw.payments, CallbackData: "ap"}},
-	}
-	return pre + "<b>" + html.EscapeString(aw.title) + "</b>", &tgapi.Keyboard{InlineKeyboard: rows}
+		{{Text: aw.broadcast, CallbackData: "ab"}},
+	}}
 }
 
 func confirm(aw *admWords, yes, no string) *tgapi.Keyboard {

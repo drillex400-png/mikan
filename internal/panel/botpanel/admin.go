@@ -3,14 +3,17 @@ package botpanel
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"mikan/internal/panel/audit"
 	"mikan/internal/panel/domain"
 	"mikan/internal/panel/model"
 	"mikan/internal/panel/store/db"
+	"mikan/internal/panel/tgate"
 	"mikan/internal/panel/tgbot"
 )
 
@@ -218,4 +221,41 @@ func (a admin) Payments(ctx context.Context, by int64) ([]tgbot.AdminPayment, er
 		})
 	}
 	return out, nil
+}
+
+func (a admin) BroadcastAudience(ctx context.Context, by int64) (int, error) {
+	if err := a.check(ctx, by); err != nil {
+		return 0, err
+	}
+	targets, err := a.l.BroadcastTargets(ctx)
+	return len(targets), err
+}
+
+// Broadcast sends through the same path as the admin panel's broadcast, so the rate limit,
+// the one-at-a-time rule and the progress are the same. The text is checked here too: the bot
+// has checked it, but the panel does not rely on that.
+func (a admin) Broadcast(ctx context.Context, by int64, text string) (int, error) {
+	if err := a.check(ctx, by); err != nil {
+		return 0, err
+	}
+	text = strings.TrimSpace(text)
+	if text == "" || utf8.RuneCountInString(text) > tgbot.MaxBroadcast {
+		return 0, model.ErrAdminInput
+	}
+	if a.l.Broadcast == nil {
+		return 0, model.ErrBroadcastOff
+	}
+	n, err := a.l.Broadcast(ctx, text)
+	switch {
+	case errors.Is(err, tgate.ErrOff):
+		return 0, model.ErrBroadcastOff
+	case errors.Is(err, ErrBusy):
+		return 0, model.ErrBroadcastBusy
+	case err != nil:
+		return 0, err
+	}
+	// The text itself is not kept in the log: its length and who it reached are.
+	_ = audit.Write(ctx, a.l.Store.Q, a.now(), audit.Entry{Action: "tgadmin.broadcast",
+		Details: map[string]any{"actor": actor(by), "recipients": n, "length": utf8.RuneCountInString(text)}})
+	return n, nil
 }

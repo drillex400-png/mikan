@@ -53,3 +53,15 @@ func (a remoteAdmin) Payments(ctx context.Context, by int64) ([]AdminPayment, er
 	err := a.r.call(ctx, "Admin.Payments", []any{by}, &p)
 	return p, err
 }
+
+func (a remoteAdmin) BroadcastAudience(ctx context.Context, by int64) (int, error) {
+	var n int
+	err := a.r.call(ctx, "Admin.BroadcastAudience", []any{by}, &n)
+	return n, err
+}
+
+func (a remoteAdmin) Broadcast(ctx context.Context, by int64, text string) (int, error) {
+	var n int
+	err := a.r.call(ctx, "Admin.Broadcast", []any{by, text}, &n)
+	return n, err
+}

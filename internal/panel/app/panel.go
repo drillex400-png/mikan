@@ -316,6 +316,8 @@ func NewPanel(st *store.Store, o Options) (*Panel, error) {
 		return err
 	}
 	p.Telegram = botpanel.New(botpanel.Deps{Backend: backend, Outbox: p.Gateway.Outbox, Emit: emit, Log: o.Log, Now: o.Now})
+	// The admin's /admin sends its broadcast the way the admin panel does.
+	backend.Broadcast = p.Telegram.Broadcast
 	// The updates wait in the buffer for the addon that holds the bot.
 	p.Gateway.SetHandler(p.AddonsAPI.BotSlot())
 	deps.Telegram, deps.Gateway = p.Telegram, p.Gateway

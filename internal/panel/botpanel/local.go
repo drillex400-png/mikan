@@ -54,6 +54,9 @@ type Local struct {
 	Gateway *tgate.Gateway
 	// SubBase is https://host:port/<sub path>, "" while the panel has no public address.
 	SubBase func(ctx context.Context) string
+	// Broadcast sends the admin's text to every subscriber (Panel.Broadcast, set by the app
+	// once the panel's side of the bot exists). nil: the admin's broadcast is not served.
+	Broadcast func(ctx context.Context, text string) (int, error)
 	// MiniApp: the panel's certificate is one Telegram apps accept (not self-signed).
 	MiniApp func() bool
 	Now     func() time.Time

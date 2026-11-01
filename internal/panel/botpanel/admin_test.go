@@ -292,3 +292,204 @@ func vals(m map[string]string) []string {
 	}
 	return out
 }
+
+// The admin's broadcast goes through the panel's own path and is refused to everybody else,
+// whatever the bot showed. The log keeps who sent it and to how many, never the text.
+func TestAdminBroadcast(t *testing.T) {
+	e := setup(t)
+	setAdmins(t, e, adminTg)
+	a := e.local.Admin()
+	ctx := context.Background()
+
+	var sent []string
+	e.local.Broadcast = func(_ context.Context, text string) (int, error) {
+		sent = append(sent, text)
+		return 7, nil
+	}
+
+	// a stranger: no number, no sending, nothing queued, nothing logged
+	for _, by := range []int64{0, 1, -adminTg, adminTg + 1} {
+		if _, err := a.BroadcastAudience(ctx, by); !errors.Is(err, model.ErrNotAdmin) {
+			t.Fatalf("audience for %d: %v", by, err)
+		}
+		if _, err := a.Broadcast(ctx, by, "hello"); !errors.Is(err, model.ErrNotAdmin) {
+			t.Fatalf("broadcast for %d: %v", by, err)
+		}
+	}
+	if len(sent) != 0 {
+		t.Fatalf("a stranger's broadcast was sent: %q", sent)
+	}
+
+	// the text is bounded, and nothing is sent for a bad one
+	for _, text := range []string{"", "   \n", strings.Repeat("я", tgbot.MaxBroadcast+1)} {
+		if _, err := a.Broadcast(ctx, adminTg, text); !errors.Is(err, model.ErrAdminInput) {
+			t.Fatalf("a text of %d characters: %v", len([]rune(text)), err)
+		}
+	}
+	if len(sent) != 0 {
+		t.Fatalf("a bad text was sent: %q", sent)
+	}
+
+	// the longest allowed text goes, trimmed, and the log has the count and not the text
+	long := strings.Repeat("я", tgbot.MaxBroadcast)
+	n, err := a.Broadcast(ctx, adminTg, "  "+long+"\n")
+	if err != nil || n != 7 || len(sent) != 1 || sent[0] != long {
+		t.Fatalf("the broadcast: n=%d err=%v sent=%d", n, err, len(sent))
+	}
+	rows, err := e.st.Q.ListAudit(e.ctx, db.ListAuditParams{BeforeID: 1 << 62, Lim: 20})
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, r := range rows {
+		if r.Action != "tgadmin.broadcast" {
+			continue
+		}
+		found = true
+		d := r.Details.String
+		if strings.Contains(d, "яя") || !strings.Contains(d, "tg:"+strconv.Itoa(adminTg)) || !strings.Contains(d, `"recipients":7`) {
+			t.Fatalf("the log entry: %s", d)
+		}
+	}
+	if !found {
+		t.Fatal("the broadcast is not in the log")
+	}
+
+	// the panel's own refusals come back as the bot's codes
+	e.local.Broadcast = func(context.Context, string) (int, error) { return 0, ErrBusy }
+	if _, err := a.Broadcast(ctx, adminTg, "x"); !errors.Is(err, model.ErrBroadcastBusy) {
+		t.Fatalf("busy: %v", err)
+	}
+	e.local.Broadcast = func(context.Context, string) (int, error) { return 0, tgate.ErrOff }
+	if _, err := a.Broadcast(ctx, adminTg, "x"); !errors.Is(err, model.ErrBroadcastOff) {
+		t.Fatalf("off: %v", err)
+	}
+	e.local.Broadcast = nil
+	if _, err := a.Broadcast(ctx, adminTg, "x"); !errors.Is(err, model.ErrBroadcastOff) {
+		t.Fatalf("not wired: %v", err)
+	}
+
+	// an admin taken out of the list loses it at once
+	setAdmins(t, e)
+	e.local.Broadcast = func(context.Context, string) (int, error) { t.Fatal("sent after removal"); return 0, nil }
+	if _, err := a.Broadcast(ctx, adminTg, "x"); !errors.Is(err, model.ErrNotAdmin) {
+		t.Fatalf("after removal: %v", err)
+	}
+}
+
+// The broadcast the way an admin runs it in the bot: the text, the preview with the number of
+// recipients, a cancel that sends nothing, and a confirmation that sends once, to the
+// subscribers only.
+func TestAdminBroadcastThroughTheBot(t *testing.T) {
+	e := setup(t)
+	const anna, boss = 555, adminTg
+	e.link(anna)
+	setAdmins(t, e, boss)
+	e.local.Broadcast = e.panel.Broadcast
+
+	const adminMsg = 9100
+	shown := func(who int64, data string) call {
+		t.Helper()
+		from := e.tg.count()
+		e.press(who, adminMsg, data)
+		cs := e.tg.until(t, from, func(cs []call) bool { _, ok := find(cs, "editMessageText"); return ok })
+		c, _ := find(cs, "editMessageText")
+		return c
+	}
+	sentTo := func(from int, chat int64) int {
+		time.Sleep(300 * time.Millisecond)
+		e.tg.mu.Lock()
+		defer e.tg.mu.Unlock()
+		n := 0
+		for _, c := range e.tg.calls[from:] {
+			if c.method == "sendMessage" && c.body["chat_id"] == float64(chat) && strings.Contains(text(c), "Плановые работы") {
+				n++
+			}
+		}
+		return n
+	}
+
+	// the first screen offers it; asking waits for the text
+	home := shown(boss, "a")
+	if buttons(home)["📣 Рассылка"] != "ab" {
+		t.Fatalf("the first screen: %v", buttons(home))
+	}
+	if c := shown(boss, "ab"); !strings.Contains(text(c), "текст рассылки") {
+		t.Fatalf("the ask: %q", text(c))
+	}
+
+	// the text comes as an ordinary message: the preview shows it as the clients get it, with the
+	// number of recipients, and sends nothing yet
+	from := e.tg.count()
+	e.say(boss, "Плановые работы в {brand} ночью")
+	cs := e.tg.until(t, from, func(cs []call) bool {
+		for _, c := range cs {
+			if c.method == "sendMessage" && strings.Contains(text(c), "увидят клиенты") {
+				return true
+			}
+		}
+		return false
+	})
+	var preview call
+	for _, c := range cs {
+		if strings.Contains(text(c), "увидят клиенты") {
+			preview = c
+		}
+	}
+	if !strings.Contains(text(preview), "Плановые работы в Mikan VPN ночью") || !strings.Contains(text(preview), "Получателей: 1") {
+		t.Fatalf("the preview: %q", text(preview))
+	}
+	if b := buttons(preview); b["Да, отправить"] != "az:m" || b["Отмена"] != "ab:x" {
+		t.Fatalf("the preview's buttons: %v", b)
+	}
+	if sentTo(from, anna) != 0 {
+		t.Fatal("the preview sent the broadcast")
+	}
+
+	// a cancel sends nothing and forgets the text: a late confirmation finds nothing to send
+	shown(boss, "ab:x")
+	from = e.tg.count()
+	if c := shown(boss, "az:m"); !strings.Contains(text(c), "потерялся") {
+		t.Fatalf("a confirmation without a text: %q", text(c))
+	}
+	if sentTo(from, anna) != 0 {
+		t.Fatal("a cancelled broadcast was sent")
+	}
+
+	// a subscriber who knows the codes sends nothing and is shown nothing of the admin's
+	from = e.tg.count()
+	e.press(anna, 9101, "az:m")
+	e.press(anna, 9101, "ab:p")
+	time.Sleep(300 * time.Millisecond)
+	for _, c := range e.tg.calls[from:] {
+		if strings.Contains(text(c), "Рассылка") || strings.Contains(text(c), "получател") {
+			t.Fatalf("a subscriber was shown the admin's broadcast: %q", text(c))
+		}
+	}
+
+	// the confirmed one goes once, to the subscriber, and the admin is told how many
+	e.say(boss, "/admin")
+	shown(boss, "ab")
+	e.say(boss, "Плановые работы в {brand} ночью")
+	e.tg.until(t, e.tg.count()-1, func([]call) bool { return true })
+	time.Sleep(300 * time.Millisecond)
+	from = e.tg.count()
+	done := shown(boss, "az:m")
+	if !strings.Contains(text(done), "Получателей: 1") {
+		t.Fatalf("the report: %q", text(done))
+	}
+	if got := sentTo(from, anna); got != 1 {
+		t.Fatalf("the subscriber got the broadcast %d times", got)
+	}
+	// pressing the confirmation again finds no text: it cannot send twice
+	from = e.tg.count()
+	if c := shown(boss, "az:m"); !strings.Contains(text(c), "потерялся") {
+		t.Fatalf("a second confirmation: %q", text(c))
+	}
+	if sentTo(from, anna) != 0 {
+		t.Fatal("the broadcast was sent twice")
+	}
+	if !strings.Contains(strings.Join(auditActions(t, e), ","), "tgadmin.broadcast") {
+		t.Fatal("the broadcast is not in the log")
+	}
+}

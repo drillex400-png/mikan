@@ -13,8 +13,9 @@ import (
 
 // Limits of what one admin action may do, held by the panel and shown by the screens.
 const (
-	MaxAdminDays  = 365 // one extension, in days
-	AdminPageSize = 8   // rows on a page of a list
+	MaxAdminDays  = 365  // one extension, in days
+	AdminPageSize = 8    // rows on a page of a list
+	MaxBroadcast  = 3000 // characters in a broadcast, as in the admin panel
 )
 
 // AdminOverview is the figures on the admin's first screen.
@@ -73,4 +74,9 @@ type Admin interface {
 	SetDisabled(ctx context.Context, by, id int64, disabled bool) (AdminUser, error)
 	Nodes(ctx context.Context, by int64) ([]AdminNode, error)
 	Payments(ctx context.Context, by int64) ([]AdminPayment, error)
+	// BroadcastAudience is how many accounts a broadcast would reach now.
+	BroadcastAudience(ctx context.Context, by int64) (int, error)
+	// Broadcast queues the text for every account with a subscription and returns how many
+	// will get it. One at a time: a second one while it is being sent is refused.
+	Broadcast(ctx context.Context, by int64, text string) (int, error)
 }
