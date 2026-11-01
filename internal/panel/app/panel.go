@@ -300,6 +300,13 @@ func NewPanel(st *store.Store, o Options) (*Panel, error) {
 	backend := &botpanel.Local{Store: st, Settings: set, Binder: deps.Devices, Users: deps.Users, Billing: p.Billing, Gateway: p.Gateway, SubBase: subBase, Now: o.Now,
 		// Telegram apps refuse a Mini App on a self-signed certificate.
 		MiniApp: func() bool { return o.Certs != nil && o.Certs.Trusted() }}
+	// The admin's servers see the nodes the way the admin panel does. A nil pointer put into
+	// an interface is not nil, so they are set only when the panel has nodes.
+	backend.Version, backend.ForgetNode, backend.WakeNodeCerts = o.Version, deps.ForgetNode, deps.WakeNodeCerts
+	if p.Nodes != nil {
+		backend.Nodes, backend.SlotsChanged = p.Nodes, p.Nodes.SlotsChanged
+		backend.NodeUpdates = p.NodeUpdates
+	}
 	// The panel's API for addons, with the Bot API proxy over the gateway for the addon that
 	// holds the bot.
 	p.AddonsAPI = panelapi.New(panelapi.Deps{Addons: p.Addons, Store: st, Hub: hub, Log: o.Log, Now: o.Now,

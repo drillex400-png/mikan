@@ -20,6 +20,18 @@ var (
 	// is off, so there is no one to send it.
 	ErrBroadcastBusy = errors.New("broadcast_busy")
 	ErrBroadcastOff  = errors.New("broadcast_off")
+	// The admin's servers: ErrNodeLocal, the action is for a remote node and this is the
+	// panel's own; ErrNodeOffline, the node does not answer; ErrNodeNotBehind, it runs the
+	// panel's version already; ErrNodeUpdating, an update of it is running; ErrNodeCannot,
+	// it is too old to update itself; ErrNodeFailed, the node or the network failed.
+	ErrNodeLocal     = errors.New("node_local")
+	ErrNodeOffline   = errors.New("node_offline")
+	ErrNodeNotBehind = errors.New("node_not_behind")
+	ErrNodeUpdating  = errors.New("node_updating")
+	ErrNodeCannot    = errors.New("node_cannot_update")
+	ErrNodeFailed    = errors.New("node_failed")
+	// ErrNodeInUse: the bot goes through the server, or a tariff would be left without servers.
+	ErrNodeInUse = errors.New("node_in_use")
 	// ErrLinkLimit: the account holds MaxLinks subscriptions already.
 	ErrLinkLimit = errors.New("max_links")
 	// ErrNotChannel: the channel check was asked about a chat that is not the bot's channel.
@@ -148,6 +160,13 @@ var codes = []struct {
 	{"admin_input", ErrAdminInput},
 	{"broadcast_busy", ErrBroadcastBusy},
 	{"broadcast_off", ErrBroadcastOff},
+	{"node_local", ErrNodeLocal},
+	{"node_offline", ErrNodeOffline},
+	{"node_not_behind", ErrNodeNotBehind},
+	{"node_updating", ErrNodeUpdating},
+	{"node_cannot_update", ErrNodeCannot},
+	{"node_failed", ErrNodeFailed},
+	{"node_in_use", ErrNodeInUse},
 	{"context_canceled", context.Canceled},
 	{"deadline_exceeded", context.DeadlineExceeded},
 }

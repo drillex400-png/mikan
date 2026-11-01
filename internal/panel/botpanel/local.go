@@ -57,6 +57,17 @@ type Local struct {
 	// Broadcast sends the admin's text to every subscriber (Panel.Broadcast, set by the app
 	// once the panel's side of the bot exists). nil: the admin's broadcast is not served.
 	Broadcast func(ctx context.Context, text string) (int, error)
+	// Nodes and NodeUpdates are the live side of the servers for /admin: the node manager and
+	// the update service the admin panel uses. nil: a panel without nodes.
+	Nodes       LiveNodes
+	NodeUpdates NodeUpdater
+	// Version is the panel's own, which a node is behind or not.
+	Version string
+	// SlotsChanged tells the syncer that the nodes' users changed; ForgetNode clears a removed
+	// node's certificates and keys; WakeNodeCerts asks for a public certificate of a changed one.
+	SlotsChanged  func()
+	ForgetNode    func(id int64) error
+	WakeNodeCerts func()
 	// MiniApp: the panel's certificate is one Telegram apps accept (not self-signed).
 	MiniApp func() bool
 	Now     func() time.Time
