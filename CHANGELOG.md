@@ -8,12 +8,14 @@ the signed manifest, and the panel shows the one in its language.
 - **/admin in the Telegram bot** (for the administrators only): an overview, the clients (a card with the subscription's state, extending it by days, blocking and unblocking), the servers, the payments, and a broadcast with a preview, the number of recipients and a confirmation. The subscribers' menu and screens are unchanged, and the command is shown only to an administrator.
 - **Bot administrators** (Settings → Telegram → Bot administrators): the Telegram IDs allowed to use /admin, up to 20, positive and unique. The panel checks the list on every call, and the account must have written to the bot lately. The card never shows a token or a subscription link.
 - **Every admin action is in the activity log** with the Telegram ID of who did it.
+- **The bot with /admin as an addon** (`ghcr.io/drillex400-png/mikan-bot`): the official bot addon answers in the bot and has no /admin, so this fork publishes its own, with the same screens and /admin. Add the repository `drillex400-png/mikan-bot-source` under Addons → Sources, install **mikan-bot**, then hand it the bot (Addons → the bot's holder). It asks for the same permissions as the official bot and no more. `mikan-release addon` makes its signed source file.
 - **An independent fork**: its own repository, image (`ghcr.io/drillex400-png/mikan`) and release signing keys. The GPL-3.0 license and the original attribution are kept.
 
 ### ru
 - **/admin в Telegram-боте** (только для администраторов): обзор, клиенты (карточка с состоянием подписки, продление на дни, блокировка и разблокировка), серверы, платежи и рассылка с предпросмотром, числом получателей и подтверждением. Меню и экраны подписчиков не менялись, команда видна только администратору.
 - **Администраторы бота** (Настройки → Telegram → Администраторы бота): Telegram ID тех, кому доступен /admin, до 20, положительные и без повторов. Панель проверяет список при каждом вызове, а аккаунт должен недавно писать боту. В карточке никогда не показываются токен и ссылка на подписку.
 - **Каждое действие администратора попадает в журнал действий** с Telegram ID того, кто его выполнил.
+- **Бот с /admin как аддон** (`ghcr.io/drillex400-png/mikan-bot`): официальный бот-аддон отвечает в боте и не знает /admin, поэтому форк публикует свой, с теми же экранами и с /admin. Добавьте репозиторий `drillex400-png/mikan-bot-source` в Аддоны → Источники, установите **mikan-bot** и отдайте ему бота. Права те же, что у официального бота, и не больше. Подписанный файл источника делает `mikan-release addon`.
 - **Независимый форк**: свой репозиторий, образ (`ghcr.io/drillex400-png/mikan`) и ключи подписи релизов. Лицензия GPL-3.0 и исходное авторство сохранены.
 
 ## 0.5.2.0
