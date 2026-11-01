@@ -96,6 +96,10 @@ var botRPC = map[string]rpcRule{
 	"Admin.Payments":    rule("users:read", []int{0}, nil),
 	"Admin.GrantDays":   rule("users:write", []int{0}, nil),
 	"Admin.SetDisabled": rule("users:write", []int{0}, nil),
+	// The broadcast: the preview counts the recipients, the send queues it. Both are the admin's
+	// and both need users:write; the panel checks the admin list again on each.
+	"Admin.BroadcastAudience": rule("users:write", []int{0}, nil),
+	"Admin.Broadcast":         rule("users:write", []int{0}, nil),
 }
 
 // talkWindow: how long an account counts as talking to the bot after its last message.

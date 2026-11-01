@@ -203,7 +203,7 @@ func TestAdminThroughTheBot(t *testing.T) {
 	e.say(anna, "/admin")
 	cs := e.tg.until(t, from, func(cs []call) bool { return len(cs) > 0 })
 	time.Sleep(200 * time.Millisecond)
-	for _, c := range e.tg.calls[from:] {
+	for _, c := range since(e.tg, from) {
 		if strings.Contains(text(c), "Администрирование") || strings.Contains(strings.Join(vals(buttons(c)), " "), "ao") {
 			t.Fatalf("a subscriber got the admin's screen: %v", c.body)
 		}
@@ -278,7 +278,7 @@ func TestAdminThroughTheBot(t *testing.T) {
 	if v, _ := e.local.Admin().User(e.ctx, boss, e.user.ID); v.State != "disabled" {
 		t.Fatalf("a subscriber unblocked the subscription: %+v", v)
 	}
-	for _, c := range e.tg.calls[from:] {
+	for _, c := range since(e.tg, from) {
 		if strings.Contains(text(c), "Готово") || strings.Contains(text(c), "Подписка «") {
 			t.Fatalf("a subscriber was shown an admin's answer: %q", text(c))
 		}
@@ -461,7 +461,7 @@ func TestAdminBroadcastThroughTheBot(t *testing.T) {
 	e.press(anna, 9101, "az:m")
 	e.press(anna, 9101, "ab:p")
 	time.Sleep(300 * time.Millisecond)
-	for _, c := range e.tg.calls[from:] {
+	for _, c := range since(e.tg, from) {
 		if strings.Contains(text(c), "Рассылка") || strings.Contains(text(c), "получател") {
 			t.Fatalf("a subscriber was shown the admin's broadcast: %q", text(c))
 		}
@@ -492,4 +492,12 @@ func TestAdminBroadcastThroughTheBot(t *testing.T) {
 	if !strings.Contains(strings.Join(auditActions(t, e), ","), "tgadmin.broadcast") {
 		t.Fatal("the broadcast is not in the log")
 	}
+}
+
+// since is the calls the fake Telegram took from the count on, copied under its lock: the bot
+// goes on sending while a test reads.
+func since(f *fakeTelegram, from int) []call {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]call(nil), f.calls[from:]...)
 }
