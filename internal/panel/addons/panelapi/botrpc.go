@@ -92,6 +92,7 @@ var botRPC = map[string]rpcRule{
 	"Admin.Overview":    rule("users:read", []int{0}, nil),
 	"Admin.Users":       rule("users:read", []int{0}, nil),
 	"Admin.User":        rule("users:read", []int{0}, nil),
+	"Admin.UsersBy":     rule("users:read", []int{0}, nil),
 	"Admin.Nodes":       rule("users:read", []int{0}, nil),
 	"Admin.Payments":    rule("users:read", []int{0}, nil),
 	"Admin.Payment":     rule("users:read", []int{0}, nil),

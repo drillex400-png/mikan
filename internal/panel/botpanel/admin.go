@@ -82,6 +82,16 @@ func (a admin) Overview(ctx context.Context, by int64) (tgbot.AdminOverview, err
 			o.PaidMonth += r.N
 		}
 	}
+	o.Revenue = a.revenue(ctx, now)
+	o.ExpireSoon = c.Expiring
+	if users, err := a.l.Store.Q.ListUsers(ctx); err == nil {
+		since := now.Add(-24 * time.Hour).Unix()
+		for _, u := range users {
+			if u.CreatedAt >= since {
+				o.NewToday++
+			}
+		}
+	}
 	return o, nil
 }
 

@@ -227,7 +227,7 @@ func (b *Bot) adminScreen(ctx context.Context, chat int64, data, notice string) 
 			return html.EscapeString(aw.notFound), kb(home)
 		}
 		b.d.Log.Warn("telegram: the admin's screen", "screen", cmd, "err", err)
-		return html.EscapeString(aw.failed), kb(home)
+		return html.EscapeString(failText(aw, err)), kb(home)
 	}
 	pre := ""
 	if notice != "" {
@@ -248,12 +248,20 @@ func (b *Bot) adminScreen(ctx context.Context, chat int64, data, notice string) 
 			"",
 			html.EscapeString("🖥 "+aw.statNodes+": ") + fmt.Sprintf("<b>%d/%d</b>", o.NodesOnline, o.Nodes),
 			pill("💳", aw.statPaid, o.PaidMonth),
-		}, "\n")
-		return pre + t, kb([]tgapi.Button{{Text: aw.refresh, CallbackData: "ao"}}, home)
-	case "au":
-		page := int(atoi(arg))
+		}, "\n") + overviewExtra(aw, o)
+		return pre + t, kb([]tgapi.Button{{Text: aw.refresh, CallbackData: "ao"}, {Text: aw.fSoon + " (" + strconv.FormatInt(o.Expiring, 10) + ")", CallbackData: "au:s:0"}}, home)
+	case "au": // au:<page> (all) or au:<filter>:<page>
+		fl, pg := "", arg
+		if f, p, ok := strings.Cut(arg, ":"); ok {
+			fl, pg = f, p
+		}
+		page := int(atoi(pg))
 		q := b.queryOf(chat)
-		us, more, err := adm.Users(ctx, chat, q, page)
+		us, more, err := adm.UsersBy(ctx, chat, fl, q, page)
+		if errors.Is(err, model.ErrAdminInput) && fl == "" || failKind(err) == failOld && fl == "" {
+			// A panel older than the bot has no filters: the plain list is what it serves.
+			us, more, err = adm.Users(ctx, chat, q, page)
+		}
 		if err != nil {
 			return fail(err)
 		}
@@ -263,21 +271,31 @@ func (b *Bot) adminScreen(ctx context.Context, chat int64, data, notice string) 
 		}
 		nav := []tgapi.Button{}
 		if page > 0 {
-			nav = append(nav, tgapi.Button{Text: aw.prev, CallbackData: "au:" + strconv.Itoa(page-1)})
+			nav = append(nav, tgapi.Button{Text: aw.prev, CallbackData: "au:" + fl + ":" + strconv.Itoa(page-1)})
 		}
 		if more {
-			nav = append(nav, tgapi.Button{Text: aw.next, CallbackData: "au:" + strconv.Itoa(page+1)})
+			nav = append(nav, tgapi.Button{Text: aw.next, CallbackData: "au:" + fl + ":" + strconv.Itoa(page+1)})
 		}
 		if len(nav) > 0 {
 			rows = append(rows, nav)
 		}
-		rows = append(rows, []tgapi.Button{{Text: aw.search, CallbackData: "as"}}, home)
+		rows = append(rows,
+			[]tgapi.Button{{Text: filterMark(fl, "", aw.fAll), CallbackData: "au::0"}, {Text: filterMark(fl, "s", aw.fSoon), CallbackData: "au:s:0"}, {Text: filterMark(fl, "e", aw.fEnded), CallbackData: "au:e:0"}},
+			[]tgapi.Button{{Text: filterMark(fl, "t", aw.fLow), CallbackData: "au:t:0"}, {Text: filterMark(fl, "n", aw.fNoTG), CallbackData: "au:n:0"}, {Text: filterMark(fl, "b", aw.fBlocked), CallbackData: "au:b:0"}},
+			[]tgapi.Button{{Text: aw.search, CallbackData: "as"}}, home)
 		t := head("👥", aw.users)
+		if fl != "" {
+			t += "\n" + html.EscapeString(aw.fShown+": "+userFilterName(aw, fl))
+		}
 		if q != "" {
 			t += "\n🔎 " + html.EscapeString(q)
 		}
 		if len(us) == 0 {
-			t += "\n\n" + html.EscapeString(aw.searchNone)
+			msg := aw.searchNone
+			if fl != "" {
+				msg = aw.fNone
+			}
+			t += "\n\n" + html.EscapeString(msg)
 		} else {
 			t += "\n" + html.EscapeString(fmt.Sprintf(aw.page, page+1))
 		}

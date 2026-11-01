@@ -6,6 +6,7 @@ import "mikan/internal/textutil"
 // panel's setup, and the subscribers' screens never read it.
 type admWords struct {
 	cmdAdmin, title, notAdmin, unavailable, failed, notFound string
+	failOld, failInput                                       string
 	overview, users, nodes, payments, back, search, refresh  string
 	statUsers, statActive, statExpiring, statExpired         string
 	statDisabled, statNodes, statPaid                        string
@@ -38,13 +39,19 @@ type admWords struct {
 
 	// Servers and the overview.
 	srvTitle, ovToday string
+
+	// The overview's money and the clients' filters.
+	ovRevenue, ovToday2, ovWeek, ovMonth, ovNew, ovSoon       string
+	fAll, fSoon, fEnded, fLow, fNoTG, fBlocked, fShown, fNone string
 }
 
 var admRU = admWords{
 	cmdAdmin: "Администрирование", title: "Администрирование", notAdmin: "Эта команда недоступна.",
 	unavailable: "Панель сейчас недоступна. Попробуйте позже.", failed: "Не получилось. Попробуйте ещё раз.",
-	notFound: "Подписка не найдена.",
-	overview: "📊 Сводка", users: "👥 Клиенты", nodes: "🖥 Серверы", payments: "💳 Платежи",
+	notFound:  "Подписка не найдена.",
+	failOld:   "Панель ещё не знает этой функции. Обновите панель до версии бота.",
+	failInput: "Панель не приняла эти данные. Проверьте значение и попробуйте ещё раз.",
+	overview:  "📊 Сводка", users: "👥 Клиенты", nodes: "🖥 Серверы", payments: "💳 Платежи",
 	back: "‹ Назад", search: "🔎 Поиск", refresh: "🔄 Обновить",
 	statUsers: "Всего подписок", statActive: "Активных", statExpiring: "Скоро закончатся",
 	statExpired: "Закончились", statDisabled: "Заблокировано", statNodes: "Серверов",
@@ -84,6 +91,9 @@ var admRU = admWords{
 	payCard: "Платёж", payKind: "Что куплено", payTariff: "Тариф", payTerm: "Срок", payPaidAt: "Оплачен",
 	payErr: "Ошибка", payUser: "Клиент", payBy: "Способ", payOpenUser: "👤 Открыть клиента", payFilter: "Показано",
 	kindNew: "новая подписка", kindRenew: "продление", kindPackage: "пакет трафика", kindTrial: "пробный период", kindDev: "доп. устройство",
+	ovRevenue: "Выручка", ovToday2: "Сегодня", ovWeek: "7 дней", ovMonth: "Месяц", ovNew: "Новых за сутки", ovSoon: "Скоро закончатся",
+	fAll: "Все", fSoon: "⏳ Скоро", fEnded: "🔴 Закончились", fLow: "📦 Трафик 90%+", fNoTG: "🔗 Без Telegram", fBlocked: "⛔ Заблокированы",
+	fShown: "Показаны", fNone: "Под этот фильтр никто не подходит.",
 	srvTitle: "Серверы", ovToday: "Сегодня", payAmount: "Сумма",
 	ntPaid: "Новая оплата", ntRefund: "Возврат платежа", ntNewUser: "Новый клиент", ntNodeUp: "Сервер снова работает", ntNodeDown: "Сервер недоступен",
 	ntSource: "Откуда", ntDownFor: "Не работал", srcAdmin: "создан в панели", srcBot: "из бота", srcFree: "бесплатный тариф",
@@ -94,8 +104,10 @@ var admRU = admWords{
 var admEN = admWords{
 	cmdAdmin: "Administration", title: "Administration", notAdmin: "This command is not available.",
 	unavailable: "The panel is unavailable right now. Try again later.", failed: "That did not work. Try again.",
-	notFound: "Subscription not found.",
-	overview: "📊 Overview", users: "👥 Clients", nodes: "🖥 Servers", payments: "💳 Payments",
+	notFound:  "Subscription not found.",
+	failOld:   "The panel does not know this function yet. Update the panel to the bot's version.",
+	failInput: "The panel did not accept that. Check the value and try again.",
+	overview:  "📊 Overview", users: "👥 Clients", nodes: "🖥 Servers", payments: "💳 Payments",
 	back: "‹ Back", search: "🔎 Search", refresh: "🔄 Refresh",
 	statUsers: "Subscriptions", statActive: "Active", statExpiring: "Expiring soon",
 	statExpired: "Expired", statDisabled: "Blocked", statNodes: "Servers",
@@ -135,6 +147,9 @@ var admEN = admWords{
 	payCard: "Payment", payKind: "Bought", payTariff: "Plan", payTerm: "Term", payPaidAt: "Paid",
 	payErr: "Error", payUser: "Client", payBy: "Method", payOpenUser: "👤 Open client", payFilter: "Showing",
 	kindNew: "new subscription", kindRenew: "renewal", kindPackage: "traffic package", kindTrial: "trial", kindDev: "extra device",
+	ovRevenue: "Revenue", ovToday2: "Today", ovWeek: "7 days", ovMonth: "Month", ovNew: "New in 24h", ovSoon: "Ending soon",
+	fAll: "All", fSoon: "⏳ Soon", fEnded: "🔴 Ended", fLow: "📦 Traffic 90%+", fNoTG: "🔗 No Telegram", fBlocked: "⛔ Blocked",
+	fShown: "Showing", fNone: "Nobody matches this filter.",
 	srvTitle: "Servers", ovToday: "Today", payAmount: "Amount",
 	ntPaid: "New payment", ntRefund: "Payment refunded", ntNewUser: "New client", ntNodeUp: "Server is back", ntNodeDown: "Server is down",
 	ntSource: "Source", ntDownFor: "Was down for", srcAdmin: "made in the panel", srcBot: "from the bot", srcFree: "free plan",

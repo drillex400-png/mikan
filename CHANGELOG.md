@@ -5,6 +5,9 @@ the signed manifest, and the panel shows the one in its language.
 
 ## 0.5.2.1
 ### en
+- **/admin overview with money**: revenue today, over 7 days and this month by currency (never added across currencies) and new clients in 24 hours.
+- **Client filters in /admin**: ending soon, ended, traffic 90%+, no Telegram, blocked. Needs the panel of this version; an older panel still opens the plain list.
+- **Clear errors in /admin** instead of "That did not work": the panel is down, the panel is older than the bot, the value was refused, a broadcast is already going.
 - **/admin in the Telegram bot** (for the administrators only): an overview, the clients (a card with the subscription's state, extending it by days, blocking and unblocking), the servers, the payments, and a broadcast with a preview, the number of recipients and a confirmation. The subscribers' menu and screens are unchanged, and the command is shown only to an administrator.
 - **Bot administrators** (Settings → Telegram → Bot administrators): the Telegram IDs allowed to use /admin, up to 20, positive and unique. The panel checks the list on every call, and the account must have written to the bot lately. The card never shows a token or a subscription link.
 - **Every admin action is in the activity log** with the Telegram ID of who did it.
@@ -12,6 +15,9 @@ the signed manifest, and the panel shows the one in its language.
 - **An independent fork**: its own repository, image (`ghcr.io/drillex400-png/mikan`) and release signing keys. The GPL-3.0 license and the original attribution are kept.
 
 ### ru
+- **Сводка в /admin с деньгами**: выручка за сегодня, 7 дней и месяц по валютам (валюты не складываются) и новые клиенты за сутки.
+- **Фильтры клиентов в /admin**: скоро закончатся, закончились, трафик 90%+, без Telegram, заблокированы. Нужна панель этой версии; на старой панели открывается обычный список.
+- **Понятные ошибки в /admin** вместо «Не получилось»: панель недоступна, панель старее бота, значение не принято, рассылка уже идёт.
 - **/admin в Telegram-боте** (только для администраторов): обзор, клиенты (карточка с состоянием подписки, продление на дни, блокировка и разблокировка), серверы, платежи и рассылка с предпросмотром, числом получателей и подтверждением. Меню и экраны подписчиков не менялись, команда видна только администратору.
 - **Администраторы бота** (Настройки → Telegram → Администраторы бота): Telegram ID тех, кому доступен /admin, до 20, положительные и без повторов. Панель проверяет список при каждом вызове, а аккаунт должен недавно писать боту. В карточке никогда не показываются токен и ссылка на подписку.
 - **Каждое действие администратора попадает в журнал действий** с Telegram ID того, кто его выполнил.

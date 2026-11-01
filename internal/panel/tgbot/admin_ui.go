@@ -134,7 +134,22 @@ func money(amount int64, cur string) string {
 
 // head is a screen's title: bold, with the rule under it.
 func head(icon, title string) string {
-	return "<b>" + icon + " " + html.EscapeString(title) + "</b>\n" + rule
+	return "<b>" + icon + " " + html.EscapeString(plain(title)) + "</b>\n" + rule
+}
+
+// plain is a button's word without the mark it starts with: "👥 Клиенты" is "Клиенты". A
+// title carries its own mark, so the button's would show twice.
+func plain(s string) string {
+	i := strings.IndexByte(s, ' ')
+	if i <= 0 {
+		return s
+	}
+	for _, r := range s[:i] {
+		if r < 0x2000 { // a letter or a digit: the first word is a word, not a mark
+			return s
+		}
+	}
+	return strings.TrimSpace(s[i+1:])
 }
 
 // kv is one line of a card: a label and its value, both escaped, the label dimmed by the
@@ -146,4 +161,41 @@ func kv(label, value string) string {
 // pill is a number with its caption for the overview, aligned by a fixed-width number.
 func pill(icon, label string, n int64) string {
 	return fmt.Sprintf("%s %s: <b>%d</b>", icon, html.EscapeString(label), n)
+}
+
+// userFilterName is the words of a clients' filter.
+func userFilterName(aw *admWords, f string) string {
+	switch f {
+	case "s":
+		return aw.fSoon
+	case "e":
+		return aw.fEnded
+	case "t":
+		return aw.fLow
+	case "n":
+		return aw.fNoTG
+	case "b":
+		return aw.fBlocked
+	}
+	return aw.fAll
+}
+
+// overviewExtra is the money and the day's figures under the overview. An older panel sends
+// none of them, and then there is nothing to add.
+func overviewExtra(aw *admWords, o AdminOverview) string {
+	var out []string
+	if o.NewToday > 0 {
+		out = append(out, html.EscapeString("🆕 "+aw.ovNew+": ")+fmt.Sprintf("<b>%d</b>", o.NewToday))
+	}
+	if len(o.Revenue) > 0 {
+		out = append(out, "", "<b>"+html.EscapeString("💰 "+aw.ovRevenue)+"</b>")
+		for _, m := range o.Revenue {
+			out = append(out, html.EscapeString(fmt.Sprintf("%s: %s · %s: %s · %s: %s",
+				aw.ovToday2, money(m.Today, m.Currency), aw.ovWeek, money(m.Week, m.Currency), aw.ovMonth, money(m.Month, m.Currency))))
+		}
+	}
+	if len(out) == 0 {
+		return ""
+	}
+	return "\n" + strings.Join(out, "\n")
 }

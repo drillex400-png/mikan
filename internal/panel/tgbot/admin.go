@@ -26,7 +26,28 @@ type AdminOverview struct {
 	Users, Active, Expiring, Expired, Disabled int64
 	Nodes, NodesOnline                         int64
 	PaidMonth                                  int64 // payments applied this month, all currencies
+	// What an older panel does not send is zero and the screens leave it out. Money is per
+	// currency, never added up across them.
+	NewToday   int64        // subscriptions made in the last 24 hours
+	ExpireSoon int64        // terms ending within 3 days
+	Revenue    []AdminMoney // by currency: today, 7 days, this month
 }
+
+// AdminMoney is what was paid in one currency, in its minor units.
+type AdminMoney struct {
+	Currency           string
+	Today, Week, Month int64
+}
+
+// The filters of the list of clients (UsersBy): a letter in the bot's buttons.
+const (
+	FilterAll     = ""
+	FilterSoon    = "s" // the term ends within the expiring window
+	FilterEnded   = "e" // the term has ended
+	FilterLowData = "t" // 90% of the traffic or more used
+	FilterNoTG    = "n" // no Telegram account linked
+	FilterBlocked = "b" // blocked by the admin
+)
 
 // AdminUser is a subscription as the admin's card shows it. It carries no subscription link
 // or token: the admin reads who it is and what it has, not how to use it.
@@ -100,6 +121,8 @@ type Admin interface {
 	// page at a time; the second result is whether there is a page after this one.
 	Users(ctx context.Context, by int64, query string, page int) ([]AdminUser, bool, error)
 	User(ctx context.Context, by, id int64) (AdminUser, error)
+	// UsersBy is Users narrowed by a filter (Filter*), soonest-ending first for the term ones.
+	UsersBy(ctx context.Context, by int64, filter, query string, page int) ([]AdminUser, bool, error)
 	// GrantDays extends the term by days (1..MaxAdminDays).
 	GrantDays(ctx context.Context, by, id, days int64) (AdminUser, error)
 	// SetDisabled blocks or unblocks the subscription.

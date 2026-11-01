@@ -2,6 +2,8 @@ package tgbot
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"strings"
@@ -18,12 +20,30 @@ const boss int64 = 900
 type fakeAdmin struct {
 	calls []string
 	user  AdminUser
+	// by is the overview's extra figures; usersByErr is what UsersBy answers with, and
+	// filters what it was asked for.
+	over       AdminOverview
+	usersByErr error
+	filters    []string
+	none       bool // the filter finds nobody
 }
 
 func (f *fakeAdmin) rec(s string) { f.calls = append(f.calls, s) }
 
 func (f *fakeAdmin) Overview(context.Context, int64) (AdminOverview, error) {
-	return AdminOverview{Users: 10, Active: 6, Expiring: 2, Expired: 1, Disabled: 1, Nodes: 2, NodesOnline: 1, PaidMonth: 4}, nil
+	o := AdminOverview{Users: 10, Active: 6, Expiring: 2, Expired: 1, Disabled: 1, Nodes: 2, NodesOnline: 1, PaidMonth: 4}
+	o.NewToday, o.Revenue = f.over.NewToday, f.over.Revenue
+	return o, nil
+}
+func (f *fakeAdmin) UsersBy(_ context.Context, _ int64, filter, _ string, _ int) ([]AdminUser, bool, error) {
+	f.filters = append(f.filters, filter)
+	if f.usersByErr != nil {
+		return nil, false, f.usersByErr
+	}
+	if f.none {
+		return nil, false, nil
+	}
+	return []AdminUser{f.user}, false, nil
 }
 func (f *fakeAdmin) Users(context.Context, int64, string, int) ([]AdminUser, bool, error) {
 	return []AdminUser{f.user}, true, nil
@@ -117,7 +137,7 @@ func TestAdminScreensDraw(t *testing.T) {
 	adm := &fakeAdmin{user: testUser()}
 	b := screenBot(adm)
 	ctx := context.Background()
-	for _, d := range []string{"a", "ao", "au:0", "au:1", "as", "ak:5", "ad:5", "ae:5:30", "ac:5:1", "ac:5:0", "ag:5", "ag:5:50", "av:5", "av:5:0",
+	for _, d := range []string{"a", "ao", "au:0", "au:1", "au::0", "au:s:0", "au:e:0", "au:t:0", "au:n:0", "au:b:2", "as", "ak:5", "ad:5", "ae:5:30", "ac:5:1", "ac:5:0", "ag:5", "ag:5:50", "av:5", "av:5:0",
 		"ar:5", "ai:5", "ax:5", "ax:5:2", "aN:5", "at:5", "aT:5:3", "an", "ap::0", "ap:p:1", "ap:f:0", "aP:7:f:0", "ab"} {
 		text, kb := b.adminScreen(ctx, boss, d, "")
 		if text == "" {
@@ -272,6 +292,96 @@ func TestAdminAskButtons(t *testing.T) {
 		row := kb.InlineKeyboard[0]
 		if row[0].CallbackData != want || row[1].CallbackData != "ak:5" {
 			t.Errorf("%s: yes=%q no=%q, want %q / ak:5", ask, row[0].CallbackData, row[1].CallbackData, want)
+		}
+	}
+}
+
+// The clients' filters ask the panel for exactly the filter on the button, and the old
+// buttons (au:<page>) of messages already sent still work.
+func TestAdminUserFilters(t *testing.T) {
+	adm := &fakeAdmin{user: testUser()}
+	b := screenBot(adm)
+	ctx := context.Background()
+	for data, want := range map[string]string{"au:0": "", "au::1": "", "au:s:0": "s", "au:e:0": "e", "au:t:3": "t", "au:n:0": "n", "au:b:0": "b"} {
+		adm.filters = nil
+		text, kb := b.adminScreen(ctx, boss, data, "")
+		if len(adm.filters) != 1 || adm.filters[0] != want {
+			t.Errorf("%s asked for %q, want %q", data, adm.filters, want)
+		}
+		if !strings.Contains(fmt.Sprint(kb), "Анна") || kb == nil {
+			t.Errorf("%s: the list is not drawn:\n%s\n%v", data, text, kb)
+		}
+	}
+	// The next page keeps the filter.
+	adm.user = testUser()
+	_, kb := b.adminScreen(ctx, boss, "au:s:0", "")
+	if !strings.Contains(fmt.Sprint(kb), "au:s:") {
+		t.Errorf("the buttons lose the filter: %v", kb)
+	}
+	// Nobody matches: a word about the filter, not about the search.
+	adm.none = true
+	text, _ := b.adminScreen(ctx, boss, "au:s:0", "")
+	if !strings.Contains(text, "фильтр") {
+		t.Errorf("an empty filter says:\n%s", text)
+	}
+}
+
+// A panel older than the bot has no UsersBy: the plain list still opens, and a filter says so
+// instead of the bare "did not work".
+func TestAdminUserFiltersOnOldPanel(t *testing.T) {
+	adm := &fakeAdmin{user: testUser(), usersByErr: &RPCError{Code: "no_method", Message: "no method Admin.UsersBy"}}
+	b := screenBot(adm)
+	ctx := context.Background()
+	if text, kb := b.adminScreen(ctx, boss, "au:0", ""); !strings.Contains(fmt.Sprint(kb), "Анна") {
+		t.Errorf("the plain list does not open on an old panel:\n%s\n%v", text, kb)
+	}
+	if text, _ := b.adminScreen(ctx, boss, "au:s:0", ""); !strings.Contains(text, "Обновите панель") {
+		t.Errorf("a filter on an old panel says:\n%s", text)
+	}
+}
+
+// The overview shows the money by currency and leaves it out when the panel sends none.
+func TestAdminOverviewMoney(t *testing.T) {
+	adm := &fakeAdmin{user: testUser()}
+	b := screenBot(adm)
+	ctx := context.Background()
+	text, _ := b.adminScreen(ctx, boss, "ao", "")
+	if strings.Contains(text, "Выручка") || strings.Contains(text, "Новых за сутки") {
+		t.Errorf("figures the panel did not send are drawn:\n%s", text)
+	}
+	adm.over = AdminOverview{NewToday: 3, Revenue: []AdminMoney{
+		{Currency: "RUB", Today: 15000, Week: 90000, Month: 250000}, {Currency: "XTR", Today: 0, Week: 50, Month: 120}}}
+	text, _ = b.adminScreen(ctx, boss, "ao", "")
+	for _, want := range []string{"Выручка", "150.00 ₽", "900.00 ₽", "2500.00 ₽", "120 ⭐", "Новых за сутки: <b>3</b>"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("the overview lacks %q:\n%s", want, text)
+		}
+	}
+	if strings.Contains(text, "₽ ⭐") {
+		t.Errorf("currencies are added up:\n%s", text)
+	}
+}
+
+// Each cause has its own sentence, and none shows the raw error.
+func TestAdminFailTexts(t *testing.T) {
+	aw := admWordsFor("ru")
+	for _, c := range []struct {
+		err  error
+		want string
+	}{
+		{context.DeadlineExceeded, aw.unavailable},
+		{&RPCError{Code: "no_method", Message: "no method X"}, aw.failOld},
+		{model.ErrAdminInput, aw.failInput},
+		{model.ErrBroadcastBusy, aw.bcBusy},
+		{model.ErrBroadcastOff, aw.bcOff},
+		{errors.New("pq: connection refused at 10.0.0.5"), aw.failed},
+	} {
+		got := failText(aw, c.err)
+		if got != c.want {
+			t.Errorf("%v: %q, want %q", c.err, got, c.want)
+		}
+		if strings.Contains(got, "10.0.0.5") || strings.Contains(got, "pq:") {
+			t.Errorf("the raw error leaks: %q", got)
 		}
 	}
 }

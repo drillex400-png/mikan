@@ -24,6 +24,15 @@ func (a remoteAdmin) Users(ctx context.Context, by int64, query string, page int
 	return us, more, err
 }
 
+func (a remoteAdmin) UsersBy(ctx context.Context, by int64, filter, query string, page int) ([]AdminUser, bool, error) {
+	var (
+		us   []AdminUser
+		more bool
+	)
+	err := a.r.call(ctx, "Admin.UsersBy", []any{by, filter, query, page}, &us, &more)
+	return us, more, err
+}
+
 func (a remoteAdmin) User(ctx context.Context, by, id int64) (AdminUser, error) {
 	var u AdminUser
 	err := a.r.call(ctx, "Admin.User", []any{by, id}, &u)
