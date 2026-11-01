@@ -44,8 +44,8 @@ func TestAddonIsSignedByTheReleaseKeyAndNamesIt(t *testing.T) {
 	if e.ID != "mikan-bot" || e.Kind != "bot" || e.Protocol != 2 || e.Digest != testDigest {
 		t.Fatalf("unexpected entry %+v", e)
 	}
-	// The official bot's permissions and no more: the admin's screens need nothing else.
-	want := "bot users:read users:write billing:invoice events kv"
+	// The official bot's permissions plus the referral programme's (kv, users:all, users:grant).
+	want := "bot users:read users:write users:all users:grant billing:invoice events kv"
 	if got := strings.Join(e.Permissions, " "); got != want {
 		t.Fatalf("permissions %q, want %q", got, want)
 	}

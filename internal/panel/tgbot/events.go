@@ -55,6 +55,11 @@ func (b *Bot) HandleEvent(ctx context.Context, e events.Event) error {
 				return nil // a subscription that is gone has nothing to be thanked for
 			}
 			b.paid(ctx, e.TgID, p, u)
+			// The referral programme rewards a friend's first payment. A failure comes
+			// back, so the event is read again; the grants carry keys, so it gives once.
+			if err := b.rewardFirstPayment(ctx, e, p); err != nil {
+				return err
+			}
 		} else {
 			b.refunded(ctx, e.TgID, p, u)
 		}

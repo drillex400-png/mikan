@@ -198,7 +198,7 @@ func (b *Bot) adminPress(ctx context.Context, chat, msg int64, data string) bool
 	cmd, _, _ := strings.Cut(data, ":")
 	switch cmd {
 	case "a", "ao", "au", "an", "ap", "aP", "ac", "ae", "ak", "ad", "as", "az", "ab",
-		"ag", "av", "ar", "ai", "ax", "at", "aT", "aN", "aS":
+		"ag", "av", "ar", "ai", "ax", "at", "aT", "aN", "aS", "aG":
 	default:
 		return false
 	}
@@ -443,6 +443,8 @@ func (b *Bot) adminScreen(ctx context.Context, chat int64, data, notice string) 
 			return fail(model.ErrNotFound)
 		}
 		return pre + html.EscapeString(fmt.Sprintf(aw.askTariff, name, u.Name)), confirm(aw, "az:t:"+idS+":"+tS, "ak:"+idS)
+	case "aG": // the referral programme: aG, aG:t, aG:i:<days>, aG:f:<days>
+		return b.growthScreen(ctx, adm, chat, arg, home)
 	case "az": // the confirmed change
 		if arg == "m" { // the broadcast: its text is the one held for this admin, once
 			text, ok := b.draftOf(chat)
@@ -496,7 +498,7 @@ func (b *Bot) adminScreen(ctx context.Context, chat int64, data, notice string) 
 	case "ab": // ab asks for the text; ab:p previews it and asks to confirm
 		if arg == "x" {
 			b.dropDraft(chat)
-			return pre + head("🛡", aw.title), b.adminHome(aw)
+			return pre + head("🛡", aw.title), b.adminHome(aw, growthAdminWordsFor(cfg.Lang).btn)
 		}
 		if arg != "p" {
 			b.dropDraft(chat)
@@ -595,7 +597,7 @@ func (b *Bot) adminScreen(ctx context.Context, chat int64, data, notice string) 
 		return pre + join(lines...), kb(rows...)
 	}
 	// "a": the admin's first screen
-	return pre + "<b>" + html.EscapeString(aw.title) + "</b>", b.adminHome(aw)
+	return pre + "<b>" + html.EscapeString(aw.title) + "</b>", b.adminHome(aw, growthAdminWordsFor(cfg.Lang).btn)
 }
 
 // payFilterStatus maps the filter letter in a payment list's callback to the status it asks.
@@ -646,11 +648,11 @@ func limitWord(aw *admWords, n int64) string {
 }
 
 // adminHome is the keyboard of the admin's first screen.
-func (b *Bot) adminHome(aw *admWords) *tgapi.Keyboard {
+func (b *Bot) adminHome(aw *admWords, growthBtn string) *tgapi.Keyboard {
 	return &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{
 		{clr(tgapi.StylePrimary, tgapi.Button{Text: aw.overview, CallbackData: "ao"}), {Text: aw.users, CallbackData: "au:0"}},
 		{{Text: aw.nodes, CallbackData: "an"}, {Text: aw.payments, CallbackData: "ap::0"}},
-		{{Text: aw.broadcast, CallbackData: "ab"}},
+		{{Text: aw.broadcast, CallbackData: "ab"}, {Text: growthBtn, CallbackData: "aG"}},
 	}}
 }
 
@@ -738,16 +740,15 @@ func truncate(s string, n int) string {
 // admin writes to the bot (and again when the bot's language changed). Every other chat's
 // menu stays as it is. A failure is tried again with the next message.
 func (b *Bot) listAdminCommand(ctx context.Context, chat int64) {
-	cfg := b.config(ctx)
+	cs, key := b.commandMenu(ctx, true)
 	b.mu.Lock()
-	done := b.adm.listed[chat] == cfg.Lang
+	done := b.adm.listed[chat] == key
 	b.mu.Unlock()
 	if done {
 		return
 	}
-	w, aw := wordsFor(cfg.Lang), admWordsFor(cfg.Lang)
 	b.d.Go(func() {
-		if err := b.d.Client.SetChatCommands(ctx, chat, w.commands, aw.cmdAdmin); err != nil {
+		if err := b.d.Client.SetChatCommandList(ctx, chat, cs); err != nil {
 			b.d.Log.Warn("telegram: the admin's command menu", "chat", chat, "err", err)
 			return
 		}
@@ -755,7 +756,7 @@ func (b *Bot) listAdminCommand(ctx context.Context, chat int64) {
 		if b.adm.listed == nil {
 			b.adm.listed = map[int64]string{}
 		}
-		b.adm.listed[chat] = cfg.Lang
+		b.adm.listed[chat] = key
 		b.mu.Unlock()
 	})
 }
