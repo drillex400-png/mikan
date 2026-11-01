@@ -28,6 +28,10 @@ type Config struct {
 	// Channel is the channel a subscriber must join before the bot shows its menu, and the
 	// one the free plan may ask for (model.FreeChannel). Off by default.
 	Channel tgapi.Channel `json:"channel"`
+	// AdminIDs are the Telegram accounts that may open /admin in the bot. Empty: nobody may.
+	// The panel checks this list again on every admin call; the bot's own check only decides
+	// what to show.
+	AdminIDs []int64 `json:"admin_ids,omitempty" doc:"Telegram ID администраторов бота: им доступна команда /admin"`
 }
 
 // MenuButton of the main menu. Built-in actions open screens; "url" opens a link, "page"
@@ -104,7 +108,14 @@ var (
 	ErrButtonURL   = errors.New("tg_button_url")
 	ErrButtonText  = errors.New("tg_button_text")
 	ErrText        = errors.New("tg_text")
+	ErrAdminIDs    = errors.New("tg_admin_ids")
 )
+
+// MaxAdmins bounds the list of the bot's admins.
+const MaxAdmins = 20
+
+// IsAdmin says whether the Telegram account may use /admin.
+func (c Config) IsAdmin(tgID int64) bool { return tgID > 0 && slices.Contains(c.AdminIDs, tgID) }
 
 // Validate checks a config from the admin panel and fills in defaults.
 func (c *Config) Validate() error {
@@ -155,6 +166,21 @@ func (c *Config) Validate() error {
 			return ErrText
 		}
 	}
+	// A user's id is positive; a negative one is a group or a channel, which must never be
+	// an admin. A repeat is dropped.
+	if len(c.AdminIDs) > MaxAdmins {
+		return ErrAdminIDs
+	}
+	ids := make([]int64, 0, len(c.AdminIDs))
+	for _, id := range c.AdminIDs {
+		if id < 1 {
+			return ErrAdminIDs
+		}
+		if !slices.Contains(ids, id) {
+			ids = append(ids, id)
+		}
+	}
+	c.AdminIDs = ids
 	c.Texts.FreeButton = strings.TrimSpace(c.Texts.FreeButton)
 	if utf8.RuneCountInString(c.Texts.FreeButton) > maxLabel {
 		return ErrButtonLabel
