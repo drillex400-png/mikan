@@ -485,6 +485,23 @@ export interface paths {
         patch: operations["update-campaign"];
         trace?: never;
     };
+    "/api/v1/cascade/ru-direct/geodata": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Скачать базы для «РФ напрямую» сейчас */
+        post: operations["refresh-ru-geodata"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/exit-dns": {
         parameters: {
             query?: never;
@@ -1008,6 +1025,24 @@ export interface paths {
         head?: never;
         /** Куда нода выпускает трафик других нод */
         patch: operations["update-node-cascade"];
+        trace?: never;
+    };
+    "/api/v1/nodes/{id}/cascade/ru-direct": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Каскад: режим «РФ напрямую» */
+        get: operations["get-node-ru-direct"];
+        /** Каскад: включить или выключить «РФ напрямую» */
+        put: operations["set-node-ru-direct"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/nodes/{id}/certificate": {
@@ -5503,6 +5538,20 @@ export interface components {
             days: number;
             enabled: boolean;
         };
+        RUData: {
+            /** @description Почему базы не скачались; режим не включается на ноде, пока их нет */
+            error?: string;
+            fetched_at?: string;
+            have: boolean;
+        };
+        RUDirectView: {
+            /** @description Базы GeoIP и GeoSite, из которых нода узнаёт российские адреса */
+            geodata?: components["schemas"]["RUData"];
+            /** @description Подключения этой ноды, у которых включён режим «РФ напрямую» */
+            inbounds: string[];
+            /** @description Включён ли режим у служебного входа (трафик других нод, идущий дальше через эту) */
+            relay: boolean;
+        };
         ReachCheck: {
             /** Format: date-time */
             at: string;
@@ -5715,6 +5764,13 @@ export interface components {
         RoutesPreviewOutputBody: {
             /** @description Профиль Clash (YAML) пользователя со всеми подключениями; ключи — заглушки */
             profile: string;
+        };
+        RuDirectPutInputBody: {
+            /** @description Имя подключения ноды; пусто: служебный вход */
+            inbound?: string;
+            on: boolean;
+            /** @description Переключить служебный вход вместо подключения */
+            relay?: boolean;
         };
         RussiaPort: {
             /** @description api или имя подключения */
@@ -7982,6 +8038,35 @@ export interface operations {
             };
         };
     };
+    "refresh-ru-geodata": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RUData"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "get-exit-dns": {
         parameters: {
             query?: never;
@@ -9237,6 +9322,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CascadeView"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-node-ru-direct": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RUDirectView"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "set-node-ru-direct": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuDirectPutInputBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RUDirectView"];
                 };
             };
             /** @description Error */

@@ -8,6 +8,7 @@ import { qk, useNodes } from "../../api/hooks";
 import { Drawer } from "../../components/overlay";
 import { QueryBoundary } from "../../components/query";
 import { useToast } from "../../components/toast";
+import { SwitchRow } from "../../components/switch";
 import { Button, Field, Pill, Segmented, Skeleton } from "../../components/ui";
 import { t } from "../../i18n";
 import { useDraft } from "../../lib/draft";
@@ -29,7 +30,12 @@ export function CascadeDrawer({ node, onClose }: { node: { id: number; name: str
       <div className="pt-5">
         <p className="mb-4 text-[13px] text-[var(--ink-600)]">{t("cascade.intro")}</p>
         <QueryBoundary query={cascade} pending={<Skeleton style={{ height: 240, borderRadius: 16 }} />}>
-          {(c) => <Body key={node!.id} nodeId={node!.id} c={c} refetch={() => void cascade.refetch()} checking={cascade.isFetching} />}
+          {(c) => (
+            <>
+              <Body key={node!.id} nodeId={node!.id} c={c} refetch={() => void cascade.refetch()} checking={cascade.isFetching} />
+              <RUDirect key={`ru${node!.id}`} nodeId={node!.id} c={c} />
+            </>
+          )}
         </QueryBoundary>
       </div>
     </Drawer>
@@ -165,5 +171,85 @@ function RelayListener({ relay }: { relay: NonNullable<Cascade["relay"]> }) {
         </div>
       )}
     </div>
+  );
+}
+
+// "Russia direct": of what leaves through another node, the traffic to Russian sites stays
+// on this node. One switch for each inbound that has an exit, one for the relay (when it
+// sends on), and the state of the databases the node reads the Russian addresses from.
+function RUDirect({ nodeId, c }: { nodeId: number; c: Cascade }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const ru = useQuery({
+    queryKey: qk.ruDirect(nodeId),
+    queryFn: ({ signal }) => unwrap(api.GET("/api/v1/nodes/{id}/cascade/ru-direct", { params: { path: { id: nodeId } }, signal })),
+  });
+  const set = useMutation({
+    mutationFn: (v: { inbound?: string; relay?: boolean; on: boolean }) =>
+      unwrap(api.PUT("/api/v1/nodes/{id}/cascade/ru-direct", { params: { path: { id: nodeId } }, body: v })),
+    onSuccess: (v) => {
+      qc.setQueryData(qk.ruDirect(nodeId), v);
+      toast.ok(t("cascade.ruDirect.saved"));
+    },
+  });
+  const refresh = useMutation({
+    mutationFn: () => unwrap(api.POST("/api/v1/cascade/ru-direct/geodata")),
+    onSuccess: (d) => {
+      void qc.invalidateQueries({ queryKey: qk.ruDirect(nodeId) });
+      if (d.have && !d.error) toast.ok(t("cascade.ruDirect.geoRefreshed"));
+    },
+  });
+  // What can be switched: the inbounds that leave through another node, and the relay when
+  // it sends on. The rest has nothing to split.
+  const withExit = c.exits.flatMap((e) => e.inbounds.map((name) => ({ name, exit: e.name })));
+  const relayExit = c.relay?.outbound === "node" ? c.exits.find((e) => e.node_id === c.relay?.exit_node_id)?.name || `#${c.relay?.exit_node_id}` : "";
+  const nothing = withExit.length === 0 && !relayExit;
+
+  return (
+    <section className="mt-5 border-t border-[var(--hairline)] pt-4">
+      <h3 className="mb-1 text-[13px] font-semibold">{t("cascade.ruDirect.title")}</h3>
+      <p className="mb-3 text-xs text-[var(--ink-500)]">{t("cascade.ruDirect.intro")}</p>
+      <QueryBoundary query={ru} pending={<Skeleton style={{ height: 96, borderRadius: 16 }} />}>
+        {(v) => (
+          <>
+            {set.error ? <div className="banner err mb-3" role="alert">{errorText(set.error)}</div> : null}
+            {nothing ? <p className="text-xs text-[var(--ink-500)]">{t("cascade.ruDirect.none")}</p> : null}
+            {withExit.map((x) => (
+              <SwitchRow
+                key={x.name}
+                label={t("cascade.ruDirect.inbound", { name: x.name })}
+                sub={t("cascade.ruDirect.inboundSub", { exit: x.exit })}
+                checked={v.inbounds.includes(x.name)}
+                disabled={set.isPending}
+                onChange={(on) => set.mutate({ inbound: x.name, on })}
+              />
+            ))}
+            {relayExit ? (
+              <SwitchRow
+                label={t("cascade.ruDirect.relay")}
+                sub={t("cascade.ruDirect.relaySub")}
+                checked={v.relay}
+                disabled={set.isPending}
+                onChange={(on) => set.mutate({ relay: true, on })}
+              />
+            ) : null}
+            {v.geodata && !nothing ? (
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[var(--ink-500)]">
+                {v.geodata.error ? (
+                  <Pill tone="bad">{t("cascade.ruDirect.geoErr", { error: v.geodata.error })}</Pill>
+                ) : v.geodata.have ? (
+                  <Pill tone="ok">{t("cascade.ruDirect.geoOk", { when: v.geodata.fetched_at ? ago(v.geodata.fetched_at) : "" })}</Pill>
+                ) : (
+                  <Pill tone="off">{t("cascade.ruDirect.geoNone")}</Pill>
+                )}
+                <Button size="sm" variant="ghost" loading={refresh.isPending} onClick={() => refresh.mutate()}>
+                  <RefreshCw size={14} aria-hidden /> {t("cascade.ruDirect.geoRefresh")}
+                </Button>
+              </div>
+            ) : null}
+          </>
+        )}
+      </QueryBoundary>
+    </section>
   );
 }

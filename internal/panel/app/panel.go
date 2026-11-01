@@ -287,6 +287,10 @@ func NewPanel(st *store.Store, o Options) (*Panel, error) {
 	deps.Pages = addonPages
 	deps.DNS = o.DNS
 	deps.Reach, deps.Geo = o.Reach, o.Geo
+	if p.Geo != nil {
+		// Only when it exists: a nil *Service in the interface would not be nil.
+		deps.GeoData = p.Geo
+	}
 	deps.DataDir = o.DataDir
 	deps.Logs, deps.Host = o.Logs, hostchan.New(o.DataDir)
 	promos := promo.New(st, o.Now)
