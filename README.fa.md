@@ -13,8 +13,8 @@
 
 </div>
 
-[![Release](https://img.shields.io/github/v/release/Miroshka000/mikan?color=f07a2e&label=release&style=flat-square)](https://github.com/Miroshka000/mikan/releases)
-[![Image](https://img.shields.io/badge/ghcr.io-miroshka000%2Fmikan-2b8c9e?style=flat-square&logo=docker&logoColor=white)](https://github.com/Miroshka000/mikan/pkgs/container/mikan)
+[![Release](https://img.shields.io/github/v/release/drillex400-png/mikan?color=f07a2e&label=release&style=flat-square)](https://github.com/drillex400-png/mikan/releases)
+[![Image](https://img.shields.io/badge/ghcr.io-drillex400--png%2Fmikan-2b8c9e?style=flat-square&logo=docker&logoColor=white)](https://github.com/drillex400-png/mikan/pkgs/container/mikan)
 [![License](https://img.shields.io/badge/license-GPL--3.0-2f9e6b?style=flat-square)](LICENSE)
 [![mihomo](https://img.shields.io/badge/core-mihomo%201.19.32-9e8eff?style=flat-square)](https://github.com/MetaCubeX/mihomo)
 [![Telegram](https://img.shields.io/badge/Telegram-channel-26a5e4?style=flat-square&logo=telegram&logoColor=white)](https://t.me/mikanvpn)
@@ -35,7 +35,7 @@
 </div>
 
 ```bash
-curl -fsSL https://github.com/Miroshka000/mikan/releases/latest/download/install.sh | sudo bash
+curl -fsSL https://github.com/drillex400-png/mikan/releases/latest/download/install.sh | sudo bash
 ```
 
 <div dir="rtl">
@@ -47,7 +47,7 @@ curl -fsSL https://github.com/Miroshka000/mikan/releases/latest/download/install
 </div>
 
 ```bash
-curl -fsSL https://github.com/Miroshka000/mikan/releases/latest/download/install.sh | sudo bash -s -- --join KEY
+curl -fsSL https://github.com/drillex400-png/mikan/releases/latest/download/install.sh | sudo bash -s -- --join KEY
 ```
 
 <div dir="rtl">
@@ -125,7 +125,7 @@ Go و PostgreSQL، سه کانتینر کوچک. روی یک سرور فعال �
 
 ## دسترسی پشتیبانی
 
-اگر به کمک نیاز دارید، خودتان دسترسی موقت را باز می‌کنید: تنظیمات ← پشتیبانی، برای ۲، ۶ یا ۲۴ ساعت، با سطح «مشاهده»، «تغییر» یا «ترمینال». بدون این دکمه هیچ‌کس، حتی توسعه‌دهندگان mikan، وارد پنل نمی‌شود: پروژه دسترسی دائمی به سرورهای شما ندارد و پنل خودش به جایی وصل نمی‌شود. هر کار اپراتور در گزارش ممیزی ثبت می‌شود، دسترسی با یک دکمه لغو می‌شود و ترمینال فقط با رمز عبور و 2FA باز می‌شود و ضبط می‌شود. برای خاموش کردن کامل این قابلیت، از کلید همان کارت استفاده کنید یا روی سرور <span dir="ltr">`mikan support-access off`</span> را اجرا کنید. قوانین پشتیبانی پولی: [در سایت](https://miroshka000.github.io/mikan/support/paid/).
+اگر به کمک نیاز دارید، خودتان دسترسی موقت را باز می‌کنید: تنظیمات ← پشتیبانی، برای ۲، ۶ یا ۲۴ ساعت، با سطح «مشاهده»، «تغییر» یا «ترمینال». بدون این دکمه هیچ‌کس، حتی توسعه‌دهندگان mikan، وارد پنل نمی‌شود: پروژه دسترسی دائمی به سرورهای شما ندارد و پنل خودش به جایی وصل نمی‌شود. هر کار اپراتور در گزارش ممیزی ثبت می‌شود، دسترسی با یک دکمه لغو می‌شود و ترمینال فقط با رمز عبور و 2FA باز می‌شود و ضبط می‌شود. برای خاموش کردن کامل این قابلیت، از کلید همان کارت استفاده کنید یا روی سرور <span dir="ltr">`mikan support-access off`</span> را اجرا کنید. قوانین پشتیبانی پولی: [در سایت](https://drillex400-png.github.io/mikan/support/paid/).
 
 ## تصاویر محیط
 
@@ -244,7 +244,7 @@ cd installer && cargo test                    # the installer (Rust)
 ## ⛔ فورک‌ها و بیلدهای شخص ثالث
 
 > [!CAUTION]
-> **mikan رسمی فقط اینجاست:** مخزن `Miroshka000/mikan`، ایمیج `ghcr.io/miroshka000/mikan` و نسخه‌هایی که با کلید mikan امضا شده‌اند. افزونه‌های رسمی فقط از کاتالوگ `getmikan/marketplace` می‌آیند؛ مخزن جامعه `getmikan/marketplace-community` افزونه‌های شخص ثالث را فهرست می‌کند که mikan آن‌ها را بررسی نمی‌کند و مسئولیتی در قبالشان ندارد. هر چیز دیگری، با هر نامی، mikan نیست.
+> **This is an independent fork of [mikan](https://github.com/Miroshka000/mikan)** (GPL-3.0). It is not the official project: this fork's repository is `drillex400-png/mikan`, its image is `ghcr.io/drillex400-png/mikan`, and its releases are signed with this fork's own key. Official addons come only from the `getmikan/marketplace` catalog; the community registry `getmikan/marketplace-community` lists third-party addons that are not reviewed here.
 >
 > **پروژه mikan هر فورک و هر بیلدی از منابع دیگر را بالقوه ناامن می‌داند.**
 >

@@ -21,7 +21,7 @@ A node accepts client connections, and a core runs inside it: Citrus (mihomo bef
 2. Click "Add and get the key". The panel shows a command with the connection key:
 
    ```bash
-   curl -fsSL https://github.com/Miroshka000/mikan/releases/latest/download/install.sh | sudo bash -s -- --join KEY
+   curl -fsSL https://github.com/drillex400-png/mikan/releases/latest/download/install.sh | sudo bash -s -- --join KEY
    ```
 
 3. Run it as root on the node's server. The installer sets up Docker and the node and opens the ports, including 80/tcp, which is needed for the node's certificate check. Then it waits up to 75 seconds for the panel to reach the node and prints the result in the terminal, for example "✓ The panel connected to this node." If it did not work, it names the reason and the fix, for example: "✗ The panel could not reach port 31234 here: timed out. Open the port in the hoster's firewall panel; ufw: ufw allow 31234/tcp". A failed check does not fail the install.

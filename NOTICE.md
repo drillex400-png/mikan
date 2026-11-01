@@ -2,7 +2,7 @@
 
 mikan  
 Copyright (C) 2026 Miroshka and Mikan  
-<https://github.com/Miroshka000/mikan>
+<https://github.com/drillex400-png/mikan>
 
 mikan is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License version 3 as published by the Free Software Foundation ([LICENSE](LICENSE)), with the additional terms below. It is distributed WITHOUT ANY WARRANTY; see the GNU General Public License for details.
 
@@ -10,7 +10,7 @@ mikan is free software: you can redistribute it and/or modify it under the terms
 
 These terms apply to mikan as a whole and to every copy and modified version of it:
 
-1. **Attribution, section 7(b).** Copies and modified versions must keep the copyright notice above and a link to <https://github.com/Miroshka000/mikan>, in this file and wherever the program shows its authorship.
+1. **Attribution, section 7(b).** Copies and modified versions must keep the copyright notice above and a link to <https://github.com/drillex400-png/mikan>, in this file and wherever the program shows its authorship.
 2. **No passing off, section 7(c).** A modified version must be clearly marked as changed and as different from the original, and must not be presented as mikan or as an official mikan release.
 3. **Names and logos, section 7(e).** No rights are granted to the name "mikan" or to the mikan logo and mascot. A modified version must use another name and another logo. See [TRADEMARK.md](TRADEMARK.md).
 
@@ -21,3 +21,7 @@ These terms apply to mikan as a whole and to every copy and modified version of 
 - **Fonts:** Unbounded, Onest and JetBrains Mono, SIL Open Font License 1.1.
 
 The other libraries mikan builds with keep their own licenses, listed in `go.mod`, `web/package.json` and `installer/Cargo.toml`.
+
+## Fork notice
+
+This repository is an independent fork of [mikan](https://github.com/Miroshka000/mikan) by Miroshka000, distributed under the GNU GPL-3.0. Upstream copyright notices and the LICENSE are kept unchanged. Releases of this fork are signed with its own release keys and are not releases of the official project.

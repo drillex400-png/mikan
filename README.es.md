@@ -9,8 +9,8 @@
 
 **Un panel VPN rápido y bonito sobre el núcleo [mihomo](https://github.com/MetaCubeX/mihomo): se instala con un solo comando y no hay que vigilarlo.**
 
-[![Versión](https://img.shields.io/github/v/release/Miroshka000/mikan?color=f07a2e&label=versión&style=flat-square)](https://github.com/Miroshka000/mikan/releases)
-[![Imagen](https://img.shields.io/badge/ghcr.io-miroshka000%2Fmikan-2b8c9e?style=flat-square&logo=docker&logoColor=white)](https://github.com/Miroshka000/mikan/pkgs/container/mikan)
+[![Versión](https://img.shields.io/github/v/release/drillex400-png/mikan?color=f07a2e&label=versión&style=flat-square)](https://github.com/drillex400-png/mikan/releases)
+[![Imagen](https://img.shields.io/badge/ghcr.io-drillex400--png%2Fmikan-2b8c9e?style=flat-square&logo=docker&logoColor=white)](https://github.com/drillex400-png/mikan/pkgs/container/mikan)
 [![Licencia](https://img.shields.io/badge/licencia-GPL--3.0-2f9e6b?style=flat-square)](LICENSE)
 [![mihomo](https://img.shields.io/badge/núcleo-mihomo%201.19.32-9e8eff?style=flat-square)](https://github.com/MetaCubeX/mihomo)
 [![Telegram](https://img.shields.io/badge/Telegram-canal-26a5e4?style=flat-square&logo=telegram&logoColor=white)](https://t.me/mikanvpn)
@@ -27,7 +27,7 @@
 En un servidor nuevo con Ubuntu 22.04+ o Debian 12+ (amd64 o arm64):
 
 ```bash
-curl -fsSL https://github.com/Miroshka000/mikan/releases/latest/download/install.sh | sudo bash
+curl -fsSL https://github.com/drillex400-png/mikan/releases/latest/download/install.sh | sudo bash
 ```
 
 El instalador pregunta el idioma del panel y un dominio opcional, comprueba que el dominio apunte al servidor, instala Docker si hace falta, elige sitios de camuflaje REALITY cerca de tu servidor e imprime tu enlace de administrador. Ejecuta `mikan` de nuevo en cualquier momento para abrir el menú de gestión.
@@ -35,7 +35,7 @@ El instalador pregunta el idioma del panel y un dominio opcional, comprueba que 
 Para añadir un nodo a un panel existente: la página **Nodos** del panel (o `mikan node add`) te da el comando con su clave:
 
 ```bash
-curl -fsSL https://github.com/Miroshka000/mikan/releases/latest/download/install.sh | sudo bash -s -- --join KEY
+curl -fsSL https://github.com/drillex400-png/mikan/releases/latest/download/install.sh | sudo bash -s -- --join KEY
 ```
 
 Sin preguntas, para scripts: `… | sudo bash -s -- --yes --lang en --domain vpn.example.com --email you@example.com` (todos los parámetros: `mikan install --help`).
@@ -113,7 +113,7 @@ lo confirme.
 
 ## Acceso de soporte
 
-Si necesitas ayuda, tú mismo abres un acceso temporal: Ajustes → Soporte, por 2, 6 o 24 horas, con el nivel «ver», «cambiar» o «terminal». Sin ese botón nadie, ni siquiera los desarrolladores de mikan, entra en el panel: el proyecto no tiene acceso permanente a tus servidores y el panel no se conecta a ningún sitio por sí mismo. Cada acción del operador queda en el registro, el acceso se revoca con un botón y la terminal exige tu contraseña y 2FA y se graba. Para desactivar la función por completo, usa el interruptor de la misma tarjeta o ejecuta `mikan support-access off` en el servidor. Reglas del soporte de pago: [en el sitio](https://miroshka000.github.io/mikan/support/paid/).
+Si necesitas ayuda, tú mismo abres un acceso temporal: Ajustes → Soporte, por 2, 6 o 24 horas, con el nivel «ver», «cambiar» o «terminal». Sin ese botón nadie, ni siquiera los desarrolladores de mikan, entra en el panel: el proyecto no tiene acceso permanente a tus servidores y el panel no se conecta a ningún sitio por sí mismo. Cada acción del operador queda en el registro, el acceso se revoca con un botón y la terminal exige tu contraseña y 2FA y se graba. Para desactivar la función por completo, usa el interruptor de la misma tarjeta o ejecuta `mikan support-access off` en el servidor. Reglas del soporte de pago: [en el sitio](https://drillex400-png.github.io/mikan/support/paid/).
 
 ## Capturas de pantalla
 
@@ -216,7 +216,7 @@ El desarrollo se hace en la rama `dev`; los pull requests hacia `main` se compil
 ## ⛔ Forks y compilaciones de terceros
 
 > [!CAUTION]
-> **El mikan oficial está solo aquí:** el repositorio `Miroshka000/mikan`, la imagen `ghcr.io/miroshka000/mikan` y las versiones firmadas con la clave de mikan. Los complementos oficiales solo vienen del catálogo `getmikan/marketplace`; el registro comunitario `getmikan/marketplace-community` lista complementos de terceros que mikan no revisa ni respalda. Todo lo demás no es mikan, se llame como se llame.
+> **This is an independent fork of [mikan](https://github.com/Miroshka000/mikan)** (GPL-3.0). It is not the official project: this fork's repository is `drillex400-png/mikan`, its image is `ghcr.io/drillex400-png/mikan`, and its releases are signed with this fork's own key. Official addons come only from the `getmikan/marketplace` catalog; the community registry `getmikan/marketplace-community` lists third-party addons that are not reviewed here.
 >
 > **El proyecto mikan considera potencialmente inseguro todo fork y toda compilación de otras fuentes.**
 >

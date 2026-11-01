@@ -15,7 +15,7 @@ func manifest(t *testing.T) []byte {
 	t.Helper()
 	data, err := json.Marshal(Manifest{
 		Version: "0.3.9", Published: time.Unix(1_800_000_000, 0).UTC(),
-		Image: "ghcr.io/miroshka000/mikan", Digest: "sha256:" + strings.Repeat("ab", 32),
+		Image: "ghcr.io/drillex400-png/mikan", Digest: "sha256:" + strings.Repeat("ab", 32),
 		Installer: map[string]Asset{"x86_64": {URL: "https://example.com/mikan-x86_64", SHA256: strings.Repeat("cd", 32)}},
 		Notes:     map[string]string{"en": "- faster", "ru": "- быстрее"},
 	})
@@ -34,7 +34,7 @@ func TestParse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if m.Ref() != "ghcr.io/miroshka000/mikan@sha256:"+strings.Repeat("ab", 32) || m.Notes["ru"] != "- быстрее" {
+	if m.Ref() != "ghcr.io/drillex400-png/mikan@sha256:"+strings.Repeat("ab", 32) || m.Notes["ru"] != "- быстрее" {
 		t.Fatalf("manifest: %+v", m)
 	}
 
@@ -91,18 +91,18 @@ func TestParseImageAndInstallers(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, image := range []string{
-		"ghcr.io/miroshka000/mikan-node", "ghcr.io/miroshka000/tools/mikan_x.1",
+		"ghcr.io/drillex400-png/mikan-node", "ghcr.io/drillex400-png/tools/mikan_x.1",
 	} {
-		if err := accept([]byte(strings.Replace(good, "ghcr.io/miroshka000/mikan", image, 1))); err != nil {
+		if err := accept([]byte(strings.Replace(good, "ghcr.io/drillex400-png/mikan", image, 1))); err != nil {
 			t.Errorf("%s: %v", image, err)
 		}
 	}
 	for _, image := range []string{
-		"docker.io/miroshka000/mikan", "ghcr.io/someone-else/mikan", "ghcr.io/Miroshka000/mikan", "ghcr.io/miroshka000/",
-		"ghcr.io/miroshka000/../x", "ghcr.io/miroshka000/Mikan", "ghcr.io/miroshka000/mi kan", "ghcr.io/miroshka000/m$x",
-		`ghcr.io/miroshka000/m\nx`, "ghcr.io/miroshka0001/mikan", "ghcr.io/mikan",
+		"docker.io/someone-else/mikan", "ghcr.io/someone-else/mikan", "ghcr.io/drillex400-png/",
+		"ghcr.io/drillex400-png/../x", "ghcr.io/drillex400-png/Mikan", "ghcr.io/drillex400-png/mi kan", "ghcr.io/drillex400-png/m$x",
+		`ghcr.io/drillex400-png/m\nx`, "ghcr.io/drillex400-png1/mikan", "ghcr.io/mikan",
 	} {
-		if accept([]byte(strings.Replace(good, "ghcr.io/miroshka000/mikan", image, 1))) == nil {
+		if accept([]byte(strings.Replace(good, "ghcr.io/drillex400-png/mikan", image, 1))) == nil {
 			t.Errorf("image %q accepted", image)
 		}
 	}
@@ -228,7 +228,7 @@ func TestNotesFor(t *testing.T) {
 // The support desk knows the official build by this fingerprint (mikan-bot keeps a copy):
 // a changed or an added release key changes it, and the desk must be told.
 func TestKeyFingerprint(t *testing.T) {
-	if got := KeyFingerprint(); got != "0570ab89f762390c" {
+	if got := KeyFingerprint(); got != "552ccf33bab8fb11" {
 		t.Fatalf("KeyFingerprint() = %s", got)
 	}
 }

@@ -9,8 +9,8 @@
 
 **基于 [mihomo](https://github.com/MetaCubeX/mihomo) 内核的 VPN 面板：快速、好看，一条命令安装，无需照看。**
 
-[![发布版本](https://img.shields.io/github/v/release/Miroshka000/mikan?color=f07a2e&label=发布版本&style=flat-square)](https://github.com/Miroshka000/mikan/releases)
-[![镜像](https://img.shields.io/badge/ghcr.io-miroshka000%2Fmikan-2b8c9e?style=flat-square&logo=docker&logoColor=white)](https://github.com/Miroshka000/mikan/pkgs/container/mikan)
+[![发布版本](https://img.shields.io/github/v/release/drillex400-png/mikan?color=f07a2e&label=发布版本&style=flat-square)](https://github.com/drillex400-png/mikan/releases)
+[![镜像](https://img.shields.io/badge/ghcr.io-drillex400--png%2Fmikan-2b8c9e?style=flat-square&logo=docker&logoColor=white)](https://github.com/drillex400-png/mikan/pkgs/container/mikan)
 [![许可证](https://img.shields.io/badge/许可证-GPL--3.0-2f9e6b?style=flat-square)](LICENSE)
 [![mihomo](https://img.shields.io/badge/内核-mihomo%201.19.32-9e8eff?style=flat-square)](https://github.com/MetaCubeX/mihomo)
 [![Telegram](https://img.shields.io/badge/Telegram-频道-26a5e4?style=flat-square&logo=telegram&logoColor=white)](https://t.me/mikanvpn)
@@ -27,7 +27,7 @@
 在全新的 Ubuntu 22.04+ 或 Debian 12+ 服务器上（amd64 或 arm64）：
 
 ```bash
-curl -fsSL https://github.com/Miroshka000/mikan/releases/latest/download/install.sh | sudo bash
+curl -fsSL https://github.com/drillex400-png/mikan/releases/latest/download/install.sh | sudo bash
 ```
 
 安装程序会询问面板语言和可选的域名，检查域名是否指向本服务器，按需安装 Docker，在服务器附近挑选 REALITY 伪装站点，并输出管理员链接。之后随时再运行 `mikan` 即可打开管理菜单。
@@ -35,7 +35,7 @@ curl -fsSL https://github.com/Miroshka000/mikan/releases/latest/download/install
 为已有面板添加节点：在面板的 **节点** 页面（或用 `mikan node add`）获取带密钥的命令：
 
 ```bash
-curl -fsSL https://github.com/Miroshka000/mikan/releases/latest/download/install.sh | sudo bash -s -- --join KEY
+curl -fsSL https://github.com/drillex400-png/mikan/releases/latest/download/install.sh | sudo bash -s -- --join KEY
 ```
 
 脚本中可免交互安装：`… | sudo bash -s -- --yes --lang en --domain vpn.example.com --email you@example.com`（全部参数见 `mikan install --help`）。
@@ -110,7 +110,7 @@ Go 和 PostgreSQL，三个小容器。在带客户端的实际运行服务器上
 
 ## 支持访问
 
-需要帮助时，由你自己开启临时访问：设置 → 支持，时长 2、6 或 24 小时，级别为「查看」「修改」或「终端」。没有这个按钮，任何人（包括 mikan 的开发者）都进不了面板：项目对你的服务器没有常驻访问，面板也不会自行连接任何地方。操作员的每个操作都写入审计日志，一键即可撤销访问，终端需要你的密码和 2FA 才能开启，并且全程录制。要彻底关闭此功能，可使用同一卡片上的开关，或在服务器上运行 `mikan support-access off`。付费支持规则：[见网站](https://miroshka000.github.io/mikan/support/paid/)。
+需要帮助时，由你自己开启临时访问：设置 → 支持，时长 2、6 或 24 小时，级别为「查看」「修改」或「终端」。没有这个按钮，任何人（包括 mikan 的开发者）都进不了面板：项目对你的服务器没有常驻访问，面板也不会自行连接任何地方。操作员的每个操作都写入审计日志，一键即可撤销访问，终端需要你的密码和 2FA 才能开启，并且全程录制。要彻底关闭此功能，可使用同一卡片上的开关，或在服务器上运行 `mikan support-access off`。付费支持规则：[见网站](https://drillex400-png.github.io/mikan/support/paid/)。
 
 ## 截图
 
@@ -213,7 +213,7 @@ cd installer && cargo test                    # the installer (Rust)
 ## ⛔ 分叉与第三方构建
 
 > [!CAUTION]
-> **官方 mikan 只在这里**：仓库 `Miroshka000/mikan`、镜像 `ghcr.io/miroshka000/mikan`，以及用 mikan 密钥签名的发布版本。官方插件只来自 `getmikan/marketplace` 目录；社区注册表 `getmikan/marketplace-community` 收录的是第三方插件，mikan 不审查也不为其负责。其他一切，无论叫什么名字，都不是 mikan。
+> **This is an independent fork of [mikan](https://github.com/Miroshka000/mikan)** (GPL-3.0). It is not the official project: this fork's repository is `drillex400-png/mikan`, its image is `ghcr.io/drillex400-png/mikan`, and its releases are signed with this fork's own key. Official addons come only from the `getmikan/marketplace` catalog; the community registry `getmikan/marketplace-community` lists third-party addons that are not reviewed here.
 >
 > **mikan 项目认为，所有分叉以及所有来自其他来源的构建都存在潜在的安全风险。**
 >

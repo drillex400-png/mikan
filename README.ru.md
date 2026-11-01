@@ -9,8 +9,8 @@
 
 **Быстрая и красивая VPN-панель на ядре [mihomo](https://github.com/MetaCubeX/mihomo): ставится одной командой и не требует присмотра.**
 
-[![Релиз](https://img.shields.io/github/v/release/Miroshka000/mikan?color=f07a2e&label=релиз&style=flat-square)](https://github.com/Miroshka000/mikan/releases)
-[![Образ](https://img.shields.io/badge/ghcr.io-miroshka000%2Fmikan-2b8c9e?style=flat-square&logo=docker&logoColor=white)](https://github.com/Miroshka000/mikan/pkgs/container/mikan)
+[![Релиз](https://img.shields.io/github/v/release/drillex400-png/mikan?color=f07a2e&label=релиз&style=flat-square)](https://github.com/drillex400-png/mikan/releases)
+[![Образ](https://img.shields.io/badge/ghcr.io-drillex400--png%2Fmikan-2b8c9e?style=flat-square&logo=docker&logoColor=white)](https://github.com/drillex400-png/mikan/pkgs/container/mikan)
 [![Лицензия](https://img.shields.io/badge/лицензия-GPL--3.0-2f9e6b?style=flat-square)](LICENSE)
 [![mihomo](https://img.shields.io/badge/ядро-mihomo%201.19.32-9e8eff?style=flat-square)](https://github.com/MetaCubeX/mihomo)
 [![Telegram](https://img.shields.io/badge/Telegram-канал-26a5e4?style=flat-square&logo=telegram&logoColor=white)](https://t.me/mikanvpn)
@@ -27,7 +27,7 @@
 На чистом сервере с Ubuntu 22.04+ или Debian 12+ (amd64 или arm64):
 
 ```bash
-curl -fsSL https://github.com/Miroshka000/mikan/releases/latest/download/install.sh | sudo bash
+curl -fsSL https://github.com/drillex400-png/mikan/releases/latest/download/install.sh | sudo bash
 ```
 
 Установщик по шагам:
@@ -41,7 +41,7 @@ curl -fsSL https://github.com/Miroshka000/mikan/releases/latest/download/install
 Нода для уже работающей панели: страница **Ноды** в панели (или `mikan node add`) выдаёт команду с ключом:
 
 ```bash
-curl -fsSL https://github.com/Miroshka000/mikan/releases/latest/download/install.sh | sudo bash -s -- --join КЛЮЧ
+curl -fsSL https://github.com/drillex400-png/mikan/releases/latest/download/install.sh | sudo bash -s -- --join КЛЮЧ
 ```
 
 Без вопросов, для скриптов: `… | sudo bash -s -- --yes --lang ru --domain vpn.example.com --email you@example.com` (все флаги: `mikan install --help`).
@@ -135,7 +135,7 @@ REST API с документацией прямо в панели, ключи с
 
 ## Доступ для поддержки
 
-Если нужна помощь, вы сами открываете временный доступ: «Настройки → Поддержка», на 2, 6 или 24 часа, с уровнем «просмотр», «изменение» или «терминал». Без этой кнопки никто, включая разработчиков mikan, в панель не попадает: у проекта нет постоянного доступа к вашим серверам, и панель сама никуда не подключается. Все действия оператора пишутся в журнал, доступ отзывается одной кнопкой, терминал включается только паролем и 2FA и записывается. Выключить функцию совсем можно тумблером в той же карточке или командой `mikan support-access off` на сервере. Правила платной поддержки: [на сайте](https://miroshka000.github.io/mikan/support/paid/).
+Если нужна помощь, вы сами открываете временный доступ: «Настройки → Поддержка», на 2, 6 или 24 часа, с уровнем «просмотр», «изменение» или «терминал». Без этой кнопки никто, включая разработчиков mikan, в панель не попадает: у проекта нет постоянного доступа к вашим серверам, и панель сама никуда не подключается. Все действия оператора пишутся в журнал, доступ отзывается одной кнопкой, терминал включается только паролем и 2FA и записывается. Выключить функцию совсем можно тумблером в той же карточке или командой `mikan support-access off` на сервере. Правила платной поддержки: [на сайте](https://drillex400-png.github.io/mikan/support/paid/).
 
 ## Скриншоты
 
@@ -246,7 +246,7 @@ cd installer && cargo test                    # установщик (Rust)
 ## ⛔ Форки и чужие сборки
 
 > [!CAUTION]
-> **Официальный mikan есть только здесь:** репозиторий `Miroshka000/mikan`, образ `ghcr.io/miroshka000/mikan` и релизы, подписанные ключом mikan. Официальные аддоны — только из каталога `getmikan/marketplace`; реестр `getmikan/marketplace-community` — это сторонние аддоны, которые mikan не проверяет и за которые не отвечает. Всё остальное — не mikan, как бы оно ни называлось.
+> **Это независимый форк [mikan](https://github.com/Miroshka000/mikan)** (GPL-3.0), а не официальный проект: репозиторий форка `drillex400-png/mikan`, образ `ghcr.io/drillex400-png/mikan`, релизы подписаны собственным ключом форка. Официальные аддоны берутся только из каталога `getmikan/marketplace`; реестр `getmikan/marketplace-community` перечисляет сторонние аддоны, которые здесь не проверяются.
 >
 > **Проект mikan считает любой форк и любую сборку не из официальных источников потенциально небезопасными.**
 >

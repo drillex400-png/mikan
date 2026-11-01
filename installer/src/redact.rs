@@ -380,10 +380,10 @@ mod tests {
             "    fix: ufw allow 31234/tcp; mikan logs node",
             "time=2026-10-14T10:00:00Z level=INFO msg=\"panel started\" listen=0.0.0.0:21355 version=0.5.1.1",
             "msg=update unit=mikan-update-request.service path=/opt/mikan/data/panel/update/request",
-            "image ghcr.io/miroshka000/mikan-panel:0.5.1.0 pulled",
+            "image ghcr.io/drillex400-png/mikan-panel:0.5.1.0 pulled",
             "github.com resolves (2 addresses)",
             "Panel contact  the panel dials back on port 31234",
-            "image ghcr.io/miroshka000/mikan-panel@sha256:0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0 runs",
+            "image ghcr.io/drillex400-png/mikan-panel@sha256:0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0 runs",
             "commit 0123456789abcdef0123456789abcdef01234567 built",
             "unit mikan-update-request-and-a-very-long-name-of-letters-only started",
         ] {

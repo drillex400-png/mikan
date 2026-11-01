@@ -1350,7 +1350,7 @@ mod tests {
         }
         for bad in [
             json!({"io.containerd.image.name": "postgres:18-alpine"}),
-            json!({"io.containerd.image.name": "ghcr.io/miroshka000/mikan:latest"}),
+            json!({"io.containerd.image.name": "ghcr.io/drillex400-png/mikan:latest"}),
             json!({"org.opencontainers.image.ref.name": "postgres:18"}),
             json!({"org.opencontainers.image.ref.name": "docker.io/library/postgres"}),
         ] {

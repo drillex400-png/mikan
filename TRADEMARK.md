@@ -16,6 +16,6 @@ The code of mikan is free under the GNU GPL v3. The name **mikan**, the mikan lo
 
 ## Official sources
 
-The official mikan is only the repository [Miroshka000/mikan](https://github.com/Miroshka000/mikan), the image `ghcr.io/miroshka000/mikan` and the releases signed with the mikan key. Official addons come only from [getmikan/marketplace](https://github.com/getmikan/marketplace).
+The official mikan is only the repository [Miroshka000/mikan](https://github.com/Miroshka000/mikan), its image `ghcr.io/miroshka000/mikan` and the releases signed with the mikan key. [drillex400-png/mikan](https://github.com/drillex400-png/mikan) is an independent fork of it, not the official project. Official addons come only from [getmikan/marketplace](https://github.com/getmikan/marketplace).
 
 Questions about the name and the logo: the [Telegram channel](https://t.me/mikanvpn).

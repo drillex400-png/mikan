@@ -9,9 +9,9 @@
 
 **A fast, beautiful VPN panel on the [mihomo](https://github.com/MetaCubeX/mihomo) core — one command to install, nothing to babysit.**
 
-[![Docs](https://img.shields.io/badge/docs-miroshka000.github.io%2Fmikan-f07a2e?style=flat-square)](https://miroshka000.github.io/mikan/)
-[![Release](https://img.shields.io/github/v/release/Miroshka000/mikan?color=f07a2e&label=release&style=flat-square)](https://github.com/Miroshka000/mikan/releases)
-[![Image](https://img.shields.io/badge/ghcr.io-miroshka000%2Fmikan-2b8c9e?style=flat-square&logo=docker&logoColor=white)](https://github.com/Miroshka000/mikan/pkgs/container/mikan)
+[![Docs](https://img.shields.io/badge/docs-drillex400-png.github.io%2Fmikan-f07a2e?style=flat-square)](https://drillex400-png.github.io/mikan/)
+[![Release](https://img.shields.io/github/v/release/drillex400-png/mikan?color=f07a2e&label=release&style=flat-square)](https://github.com/drillex400-png/mikan/releases)
+[![Image](https://img.shields.io/badge/ghcr.io-drillex400--png%2Fmikan-2b8c9e?style=flat-square&logo=docker&logoColor=white)](https://github.com/drillex400-png/mikan/pkgs/container/mikan)
 [![License](https://img.shields.io/badge/license-GPL--3.0-2f9e6b?style=flat-square)](LICENSE)
 [![mihomo](https://img.shields.io/badge/core-mihomo%201.19.32-9e8eff?style=flat-square)](https://github.com/MetaCubeX/mihomo)
 [![Telegram](https://img.shields.io/badge/Telegram-channel-26a5e4?style=flat-square&logo=telegram&logoColor=white)](https://t.me/mikanvpn)
@@ -28,7 +28,7 @@
 On a fresh Ubuntu 22.04+ or Debian 12+ server (amd64 or arm64):
 
 ```bash
-curl -fsSL https://github.com/Miroshka000/mikan/releases/latest/download/install.sh | sudo bash
+curl -fsSL https://github.com/drillex400-png/mikan/releases/latest/download/install.sh | sudo bash
 ```
 
 The installer asks for the panel language and an optional domain, checks that the domain points to the server, installs Docker if needed, picks REALITY camouflage sites next to your server and prints your admin link. Run `mikan` again at any time for the management menu.
@@ -36,7 +36,7 @@ The installer asks for the panel language and an optional domain, checks that th
 A node for an existing panel: the panel's **Nodes** page (or `mikan node add`) gives the command with its key:
 
 ```bash
-curl -fsSL https://github.com/Miroshka000/mikan/releases/latest/download/install.sh | sudo bash -s -- --join KEY
+curl -fsSL https://github.com/drillex400-png/mikan/releases/latest/download/install.sh | sudo bash -s -- --join KEY
 ```
 
 Without questions, for scripts: `… | sudo bash -s -- --yes --lang en --domain vpn.example.com --email you@example.com` (all flags: `mikan install --help`).
@@ -113,7 +113,7 @@ the provider confirms it.
 
 ## Support access
 
-When you need help, you open a temporary access yourself: Settings → Support, for 2, 6 or 24 hours, at the "view", "change" or "terminal" level. Without that button nobody, mikan's developers included, gets into the panel: the project has no standing access to your servers, and the panel connects nowhere by itself. Every operator action goes into the audit log, access is revoked with one button, and the terminal needs your password and 2FA and is recorded. To turn the feature off for good, use the switch on the same card or run `mikan support-access off` on the server. Paid support rules: [on the website](https://miroshka000.github.io/mikan/support/paid/).
+When you need help, you open a temporary access yourself: Settings → Support, for 2, 6 or 24 hours, at the "view", "change" or "terminal" level. Without that button nobody, mikan's developers included, gets into the panel: the project has no standing access to your servers, and the panel connects nowhere by itself. Every operator action goes into the audit log, access is revoked with one button, and the terminal needs your password and 2FA and is recorded. To turn the feature off for good, use the switch on the same card or run `mikan support-access off` on the server. Paid support rules: [on the website](https://drillex400-png.github.io/mikan/support/paid/).
 
 ## Screenshots
 
@@ -216,7 +216,7 @@ Development happens on the `dev` branch; pull requests into `main` are built and
 ## ⛔ Forks and third-party builds
 
 > [!CAUTION]
-> **The official mikan lives only here:** the repository `Miroshka000/mikan`, the image `ghcr.io/miroshka000/mikan` and releases signed with the mikan key. Official addons come only from the `getmikan/marketplace` catalog; the community registry `getmikan/marketplace-community` lists third-party addons that mikan does not review and is not responsible for. Anything else is not mikan, whatever it calls itself.
+> **This is an independent fork of [mikan](https://github.com/Miroshka000/mikan)** (GPL-3.0). It is not the official project: this fork's repository is `drillex400-png/mikan`, its image is `ghcr.io/drillex400-png/mikan`, and its releases are signed with this fork's own key. Official addons come only from the `getmikan/marketplace` catalog; the community registry `getmikan/marketplace-community` lists third-party addons that are not reviewed here.
 >
 > **The mikan project considers every fork and every build from other sources potentially unsafe.**
 >

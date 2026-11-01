@@ -21,7 +21,7 @@ import { Steps } from '@astrojs/starlight/components';
 2. Нажмите «Добавить и получить ключ». Панель покажет команду с ключом подключения:
 
    ```bash
-   curl -fsSL https://github.com/Miroshka000/mikan/releases/latest/download/install.sh | sudo bash -s -- --join КЛЮЧ
+   curl -fsSL https://github.com/drillex400-png/mikan/releases/latest/download/install.sh | sudo bash -s -- --join КЛЮЧ
    ```
 
 3. Выполните её от root на сервере ноды. Установщик поставит Docker и ноду и откроет порты, в том числе 80/tcp: он нужен для проверки сертификата ноды. Потом он до 75 секунд ждёт, пока панель достучится до ноды, и печатает результат в терминале, по-английски, например `✓ The panel connected to this node.` Если не вышло, он назовёт причину и как её исправить, например: `✗ The panel could not reach port 31234 here: timed out. Open the port in the hoster's firewall panel; ufw: ufw allow 31234/tcp`. Неудачная проверка установку не прерывает.

@@ -51,9 +51,9 @@ func TestRedactLeavesOrdinaryLines(t *testing.T) {
 	for _, line := range []string{
 		`time=2026-10-14T10:00:00Z level=INFO msg="panel started" listen=0.0.0.0:21355 tls=true version=0.5.1.1`,
 		"msg=update unit=mikan-update-request.service path=/opt/mikan/data/panel/update/request",
-		"image ghcr.io/miroshka000/mikan-panel:0.5.1.0 pulled",
+		"image ghcr.io/drillex400-png/mikan-panel:0.5.1.0 pulled",
 		"node 4 health ok users=120 inbounds=3",
-		"image ghcr.io/miroshka000/mikan-panel@sha256:0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0 runs",
+		"image ghcr.io/drillex400-png/mikan-panel@sha256:0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0 runs",
 		"unit mikan-update-request-and-a-very-long-name-of-letters-only started",
 	} {
 		if got := Redact(line); got != line {

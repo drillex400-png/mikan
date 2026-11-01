@@ -322,7 +322,7 @@ mod tests {
     #[test]
     fn values_go_into_compose_as_written() {
         let mut c = Config::new("x");
-        for ok in ["ghcr.io/miroshka000/mikan@sha256:ab12", "0.4.4-rc.1+b2", "21355", ""] {
+        for ok in ["ghcr.io/drillex400-png/mikan@sha256:ab12", "0.4.4-rc.1+b2", "21355", ""] {
             c.set("K", ok).unwrap();
         }
         for bad in ["a$HOME", "${X}", "a b", "a #b", "\"q\"", "a\nb", "img?x=1"] {

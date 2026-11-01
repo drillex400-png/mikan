@@ -25,8 +25,8 @@ import (
 // The private halves live only in the RELEASE_SIGNING_KEY secret of the release workflow and
 // with the maintainer.
 var ReleaseKeys = []string{
-	"Z3wSIPBSaJxh5CsGO8eINI0aM0kyrQ46EcJSNeH85W8=",
-	"J4DbLqhnFdx8ncEiF4BQOW1aucukNCCgMhcZ18pCWFw=",
+	"ggI8JFs+q/+I3ha04HFr4Fn3jHoo8ST8Nuhq2AGSNuQ=",
+	"uKdDDOznHp11nRkhxpBZjE/pjqAEkysdgjhcDsAGQOg=",
 }
 
 // CatalogKey and CommunityKey are the public halves of the keys of the marketplace's signed
@@ -69,7 +69,7 @@ func KeyFingerprint() string {
 }
 
 // Repo is where releases are published.
-const Repo = "Miroshka000/mikan"
+const Repo = "drillex400-png/mikan"
 
 // InstallCommand installs mikan from the latest release; run on the server.
 const InstallCommand = "curl -fsSL https://github.com/" + Repo + "/releases/latest/download/install.sh | sudo bash"
@@ -84,7 +84,7 @@ type Manifest struct {
 	Version      string            `json:"version"`
 	MinInstaller string            `json:"min_installer,omitempty"`
 	Published    time.Time         `json:"published"`
-	Image        string            `json:"image" doc:"Образ в GitHub Packages, например ghcr.io/miroshka000/mikan"`
+	Image        string            `json:"image" doc:"Образ в GitHub Packages, например ghcr.io/drillex400-png/mikan"`
 	Digest       string            `json:"digest" doc:"sha256 multi-arch образа"`
 	Installer    map[string]Asset  `json:"installer" doc:"Установщик по архитектуре: x86_64, aarch64"`
 	Notes        map[string]string `json:"notes" doc:"Что изменилось, markdown по языкам: en, ru"`

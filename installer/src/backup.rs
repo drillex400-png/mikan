@@ -853,7 +853,7 @@ mod tests {
     fn a_node_archive_keeps_the_image() {
         let mut archived = Config::from_env_text("x", "MIKAN_MODE=node\nMIKAN_IMAGE=evil.example/x\nMIKAN_VERSION=9.9.9\nNODE_PORT=1\n");
         let current =
-            Config::from_env_text("x", "MIKAN_MODE=node\nMIKAN_IMAGE=ghcr.io/miroshka000/mikan@sha256:aa\nMIKAN_VERSION=0.5.0.5\n");
+            Config::from_env_text("x", "MIKAN_MODE=node\nMIKAN_IMAGE=ghcr.io/drillex400-png/mikan@sha256:aa\nMIKAN_VERSION=0.5.0.5\n");
         fit_to_node(&mut archived, &current).unwrap();
         assert_eq!(archived.get("MIKAN_IMAGE"), current.get("MIKAN_IMAGE"));
         assert_eq!(archived.get("MIKAN_VERSION"), current.get("MIKAN_VERSION"));

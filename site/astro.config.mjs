@@ -4,10 +4,10 @@ import starlight from '@astrojs/starlight';
 import starlightLinksValidator from 'starlight-links-validator';
 import changelog from './integrations/changelog.mjs';
 
-// GitHub Pages serves the project at miroshka000.github.io/mikan/. Links inside the docs are
+// GitHub Pages serves the project at drillex400-png.github.io/mikan/. Links inside the docs are
 // written with the base (/mikan/...), and the link validator checks them on every build.
 export default defineConfig({
-	site: 'https://miroshka000.github.io',
+	site: 'https://drillex400-png.github.io',
 	base: '/mikan',
 	trailingSlash: 'always',
 	integrations: [
@@ -23,7 +23,7 @@ export default defineConfig({
 				root: { label: 'Русский', lang: 'ru' },
 				en: { label: 'English', lang: 'en' },
 			},
-			editLink: { baseUrl: 'https://github.com/Miroshka000/mikan/edit/dev/site/' },
+			editLink: { baseUrl: 'https://github.com/drillex400-png/mikan/edit/dev/site/' },
 			lastUpdated: false,
 			credits: false,
 			customCss: [

@@ -16,7 +16,7 @@ use sha2::{Digest, Sha256};
 /// manifest or the release index signed by any of them is the project's. The first signs the
 /// releases now; the second is trusted ahead, so the releases can move to it and leave no
 /// installer behind.
-pub const RELEASE_KEYS: [&str; 2] = ["Z3wSIPBSaJxh5CsGO8eINI0aM0kyrQ46EcJSNeH85W8=", "J4DbLqhnFdx8ncEiF4BQOW1aucukNCCgMhcZ18pCWFw="];
+pub const RELEASE_KEYS: [&str; 2] = ["ggI8JFs+q/+I3ha04HFr4Fn3jHoo8ST8Nuhq2AGSNuQ=", "uKdDDOznHp11nRkhxpBZjE/pjqAEkysdgjhcDsAGQOg="];
 
 /// The public half of the official catalog's key (internal/release.CatalogKey). The catalog is
 /// signed in its context (CATALOG_CONTEXT), and its signature is published as SIG_SUFFIX.
@@ -30,11 +30,11 @@ pub const CATALOG_CONTEXT: &str = "mikan catalog v1\n";
 /// own (".sig") is over the bytes alone.
 pub const SIG_SUFFIX: &str = ".sig2";
 
-pub const REPO: &str = "Miroshka000/mikan";
+pub const REPO: &str = "drillex400-png/mikan";
 
 /// The project's own namespace on GitHub Packages: ghcr.io/<owner of REPO in lowercase>/,
 /// as internal/release checks it.
-const IMAGE_PREFIX: &str = "ghcr.io/miroshka000/";
+const IMAGE_PREFIX: &str = "ghcr.io/drillex400-png/";
 
 /// Installs a node of an existing panel on a fresh server (internal/release.JoinCommand).
 pub fn join_command(key: &str) -> String {
@@ -559,7 +559,7 @@ mod tests {
 
     fn manifest(version: &str, image: &str) -> Vec<u8> {
         format!(
-            r#"{{"version":"{version}","published":"2026-09-29T10:00:00Z","image":"{image}","digest":"sha256:{}","installer":{{"x86_64":{{"url":"https://github.com/Miroshka000/mikan/releases/download/v{version}/mikan-x86_64","sha256":"{}"}}}},"notes":{{"en":"- x"}}}}"#,
+            r#"{{"version":"{version}","published":"2026-09-29T10:00:00Z","image":"{image}","digest":"sha256:{}","installer":{{"x86_64":{{"url":"https://github.com/drillex400-png/mikan/releases/download/v{version}/mikan-x86_64","sha256":"{}"}}}},"notes":{{"en":"- x"}}}}"#,
             "a".repeat(64),
             "b".repeat(64)
         )
@@ -570,10 +570,10 @@ mod tests {
     fn signed_manifests_only() {
         let signer = SigningKey::from_bytes(&[7; 32]);
         let key = signer.verifying_key();
-        let data = manifest("0.3.9", "ghcr.io/miroshka000/mikan");
+        let data = manifest("0.3.9", "ghcr.io/drillex400-png/mikan");
         let sig = STANDARD.encode(signer.sign(&data).to_bytes());
         let m = parse(&data, &format!("{sig}\n"), &[key]).unwrap();
-        assert_eq!(m.reference(), format!("ghcr.io/miroshka000/mikan@sha256:{}", "a".repeat(64)));
+        assert_eq!(m.reference(), format!("ghcr.io/drillex400-png/mikan@sha256:{}", "a".repeat(64)));
         assert_eq!(m.installer["x86_64"].sha256, "b".repeat(64));
 
         let mut tampered = data.clone();
@@ -594,7 +594,7 @@ mod tests {
     fn new_fields_do_not_break_old_installers() {
         let signer = SigningKey::from_bytes(&[7; 32]);
         let key = signer.verifying_key();
-        let text = String::from_utf8(manifest("0.4.4", "ghcr.io/miroshka000/mikan")).unwrap();
+        let text = String::from_utf8(manifest("0.4.4", "ghcr.io/drillex400-png/mikan")).unwrap();
         let extended = text.replacen("{\"version\"", "{\"min_installer\":\"0.4.4\",\"channel\":\"stable\",\"version\"", 1).replacen(
             "\"sha256\":",
             "\"size\":123,\"sha256\":",
@@ -619,19 +619,19 @@ mod tests {
         let signer = SigningKey::from_bytes(&[7; 32]);
         let key = signer.verifying_key();
         let accept = |data: &[u8]| parse(data, &STANDARD.encode(signer.sign(data).to_bytes()), &[key]).is_ok();
-        assert!(accept(&manifest("0.4.4", "ghcr.io/miroshka000/mikan")));
+        assert!(accept(&manifest("0.4.4", "ghcr.io/drillex400-png/mikan")));
         for bad in [
             "ghcr.io/someone-else/mikan",
-            "ghcr.io/miroshka000/../x",
-            "ghcr.io/miroshka000/Mi kan",
-            "ghcr.io/miroshka000/",
-            "ghcr.io/miroshka000/m$x",
+            "ghcr.io/drillex400-png/../x",
+            "ghcr.io/drillex400-png/Mi kan",
+            "ghcr.io/drillex400-png/",
+            "ghcr.io/drillex400-png/m$x",
         ] {
             assert!(!accept(&manifest("0.4.4", bad)), "{bad}");
         }
-        let short_hash = String::from_utf8(manifest("0.4.4", "ghcr.io/miroshka000/mikan")).unwrap().replace(&"b".repeat(64), "bb");
+        let short_hash = String::from_utf8(manifest("0.4.4", "ghcr.io/drillex400-png/mikan")).unwrap().replace(&"b".repeat(64), "bb");
         assert!(!accept(short_hash.as_bytes()));
-        let plain_http = String::from_utf8(manifest("0.4.4", "ghcr.io/miroshka000/mikan")).unwrap().replace("https://", "http://");
+        let plain_http = String::from_utf8(manifest("0.4.4", "ghcr.io/drillex400-png/mikan")).unwrap().replace("https://", "http://");
         assert!(!accept(plain_http.as_bytes()));
     }
 
@@ -800,7 +800,7 @@ mod tests {
         }
         fn release(&self, version: &str) -> String {
             let url = format!("https://github.com/{REPO}/releases/download/v{version}/manifest.json");
-            self.put(&url, manifest(version, "ghcr.io/miroshka000/mikan"));
+            self.put(&url, manifest(version, "ghcr.io/drillex400-png/mikan"));
             url
         }
         /// An index of "version channel from" entries.
@@ -827,7 +827,7 @@ mod tests {
         for v in ["0.4.5", "0.5.0.0", "0.5.0.1", "0.5.0.2-rc.1", "0.6.0.0"] {
             f.release(v);
         }
-        let latest = manifest("0.5.0.0", "ghcr.io/miroshka000/mikan");
+        let latest = manifest("0.5.0.0", "ghcr.io/drillex400-png/mikan");
         f.put(&latest_url(), latest);
         f.index(&[
             "0.4.5 stable 0.4.0",
@@ -868,7 +868,7 @@ mod tests {
         f.index(&["0.5.0.1 stable 0.4.5"]);
         f.put(
             &format!("https://github.com/{REPO}/releases/download/v0.5.0.1/manifest.json"),
-            manifest("0.5.0.2", "ghcr.io/miroshka000/mikan"),
+            manifest("0.5.0.2", "ghcr.io/drillex400-png/mikan"),
         );
         fallback("a manifest of another version");
         f.files.borrow_mut().clear();

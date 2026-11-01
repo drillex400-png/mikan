@@ -9,8 +9,8 @@
 
 **[mihomo](https://github.com/MetaCubeX/mihomo) çekirdeği üzerinde hızlı ve güzel bir VPN paneli: tek komutla kurulur, başında beklemek gerekmez.**
 
-[![Sürüm](https://img.shields.io/github/v/release/Miroshka000/mikan?color=f07a2e&label=sürüm&style=flat-square)](https://github.com/Miroshka000/mikan/releases)
-[![İmaj](https://img.shields.io/badge/ghcr.io-miroshka000%2Fmikan-2b8c9e?style=flat-square&logo=docker&logoColor=white)](https://github.com/Miroshka000/mikan/pkgs/container/mikan)
+[![Sürüm](https://img.shields.io/github/v/release/drillex400-png/mikan?color=f07a2e&label=sürüm&style=flat-square)](https://github.com/drillex400-png/mikan/releases)
+[![İmaj](https://img.shields.io/badge/ghcr.io-drillex400--png%2Fmikan-2b8c9e?style=flat-square&logo=docker&logoColor=white)](https://github.com/drillex400-png/mikan/pkgs/container/mikan)
 [![Lisans](https://img.shields.io/badge/lisans-GPL--3.0-2f9e6b?style=flat-square)](LICENSE)
 [![mihomo](https://img.shields.io/badge/çekirdek-mihomo%201.19.32-9e8eff?style=flat-square)](https://github.com/MetaCubeX/mihomo)
 [![Telegram](https://img.shields.io/badge/Telegram-kanal-26a5e4?style=flat-square&logo=telegram&logoColor=white)](https://t.me/mikanvpn)
@@ -27,7 +27,7 @@
 Yeni bir Ubuntu 22.04+ veya Debian 12+ sunucuda (amd64 veya arm64):
 
 ```bash
-curl -fsSL https://github.com/Miroshka000/mikan/releases/latest/download/install.sh | sudo bash
+curl -fsSL https://github.com/drillex400-png/mikan/releases/latest/download/install.sh | sudo bash
 ```
 
 Kurulum betiği panel dilini ve isteğe bağlı bir alan adını sorar, alan adının sunucuyu gösterdiğini kontrol eder, gerekirse Docker'ı kurar, sunucunuzun yakınında REALITY kamuflaj siteleri seçer ve yönetici bağlantınızı yazdırır. Yönetim menüsü için `mikan` komutunu istediğiniz zaman yeniden çalıştırabilirsiniz.
@@ -35,7 +35,7 @@ Kurulum betiği panel dilini ve isteğe bağlı bir alan adını sorar, alan ad�
 Mevcut bir panele düğüm eklemek için: panelin **Düğümler** sayfası (veya `mikan node add`) anahtarıyla birlikte komutu verir:
 
 ```bash
-curl -fsSL https://github.com/Miroshka000/mikan/releases/latest/download/install.sh | sudo bash -s -- --join KEY
+curl -fsSL https://github.com/drillex400-png/mikan/releases/latest/download/install.sh | sudo bash -s -- --join KEY
 ```
 
 Soru sormadan, betikler için: `… | sudo bash -s -- --yes --lang en --domain vpn.example.com --email you@example.com` (tüm bayraklar: `mikan install --help`).
@@ -112,7 +112,7 @@ Mikan ödemeyi iade edebilir.
 
 ## Destek erişimi
 
-Yardıma ihtiyacın olduğunda geçici erişimi kendin açarsın: Ayarlar → Destek, 2, 6 veya 24 saatliğine, «görüntüleme», «değiştirme» veya «terminal» seviyesinde. Bu düğme olmadan mikan geliştiricileri dahil kimse panele giremez: projenin sunucularına kalıcı erişimi yoktur ve panel kendiliğinden hiçbir yere bağlanmaz. Operatörün her işlemi denetim günlüğüne yazılır, erişim tek düğmeyle geri alınır, terminal parolan ve 2FA ile açılır ve kaydedilir. Özelliği tamamen kapatmak için aynı karttaki anahtarı kullan veya sunucuda `mikan support-access off` çalıştır. Ücretli destek kuralları: [sitede](https://miroshka000.github.io/mikan/support/paid/).
+Yardıma ihtiyacın olduğunda geçici erişimi kendin açarsın: Ayarlar → Destek, 2, 6 veya 24 saatliğine, «görüntüleme», «değiştirme» veya «terminal» seviyesinde. Bu düğme olmadan mikan geliştiricileri dahil kimse panele giremez: projenin sunucularına kalıcı erişimi yoktur ve panel kendiliğinden hiçbir yere bağlanmaz. Operatörün her işlemi denetim günlüğüne yazılır, erişim tek düğmeyle geri alınır, terminal parolan ve 2FA ile açılır ve kaydedilir. Özelliği tamamen kapatmak için aynı karttaki anahtarı kullan veya sunucuda `mikan support-access off` çalıştır. Ücretli destek kuralları: [sitede](https://drillex400-png.github.io/mikan/support/paid/).
 
 ## Ekran görüntüleri
 
@@ -215,7 +215,7 @@ Geliştirme `dev` dalında yapılır. `main` dalına açılan çekme istekleri d
 ## ⛔ Fork'lar ve üçüncü taraf derlemeler
 
 > [!CAUTION]
-> **Resmî mikan yalnızca burada:** `Miroshka000/mikan` deposu, `ghcr.io/miroshka000/mikan` imajı ve mikan anahtarıyla imzalanmış sürümler. Resmî eklentiler yalnızca `getmikan/marketplace` kataloğundan gelir; topluluk kaydı `getmikan/marketplace-community`, mikan'ın incelemediği ve sorumluluğunu almadığı üçüncü taraf eklentileri listeler. Geri kalan her şey, adı ne olursa olsun, mikan değildir.
+> **This is an independent fork of [mikan](https://github.com/Miroshka000/mikan)** (GPL-3.0). It is not the official project: this fork's repository is `drillex400-png/mikan`, its image is `ghcr.io/drillex400-png/mikan`, and its releases are signed with this fork's own key. Official addons come only from the `getmikan/marketplace` catalog; the community registry `getmikan/marketplace-community` lists third-party addons that are not reviewed here.
 >
 > **mikan projesi, her fork'u ve başka kaynaklardan gelen her derlemeyi potansiyel olarak güvensiz kabul eder.**
 >
