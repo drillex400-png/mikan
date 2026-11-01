@@ -3,6 +3,19 @@
 Each release has a section in English and in Russian; the release workflow puts them in
 the signed manifest, and the panel shows the one in its language.
 
+## 0.5.2.1
+### en
+- **/admin in the Telegram bot** (for the administrators only): an overview, the clients (a card with the subscription's state, extending it by days, blocking and unblocking), the servers, the payments, and a broadcast with a preview, the number of recipients and a confirmation. The subscribers' menu and screens are unchanged, and the command is shown only to an administrator.
+- **Bot administrators** (Settings → Telegram → Bot administrators): the Telegram IDs allowed to use /admin, up to 20, positive and unique. The panel checks the list on every call, and the account must have written to the bot lately. The card never shows a token or a subscription link.
+- **Every admin action is in the activity log** with the Telegram ID of who did it.
+- **An independent fork**: its own repository, image (`ghcr.io/drillex400-png/mikan`) and release signing keys. The GPL-3.0 license and the original attribution are kept.
+
+### ru
+- **/admin в Telegram-боте** (только для администраторов): обзор, клиенты (карточка с состоянием подписки, продление на дни, блокировка и разблокировка), серверы, платежи и рассылка с предпросмотром, числом получателей и подтверждением. Меню и экраны подписчиков не менялись, команда видна только администратору.
+- **Администраторы бота** (Настройки → Telegram → Администраторы бота): Telegram ID тех, кому доступен /admin, до 20, положительные и без повторов. Панель проверяет список при каждом вызове, а аккаунт должен недавно писать боту. В карточке никогда не показываются токен и ссылка на подписку.
+- **Каждое действие администратора попадает в журнал действий** с Telegram ID того, кто его выполнил.
+- **Независимый форк**: свой репозиторий, образ (`ghcr.io/drillex400-png/mikan`) и ключи подписи релизов. Лицензия GPL-3.0 и исходное авторство сохранены.
+
 ## 0.5.2.0
 ### en
 - **API changes** (server groups and plans; for scripts and addons that call them): `POST /api/v1/tariffs/{id}/apply-pools` is gone, and `POST /api/v1/tariffs/{id}/apply` replaces it, with the flags `traffic`, `devices`, `speed` and `groups` (at least one; `groups` is what apply-pools did). The field `excluded` of `PoolSetting` (called `PoolLimit` before; the plan's `pools` and `PUT /api/v1/users/{id}/pools`) and of `UserPoolView` is gone: `mode` replaces it, one of `main`, `own`, `unlimited` and `closed`, and `traffic_limit` goes only with `own` (before: a limit, `null` for none, `excluded: true`; the update converts what exists). A plan's `pools` (`TariffView.pools`) now lists every group with its `mode`, not only the groups with a row of the plan, and a group that a plan's request leaves out is on the main traffic, where it used to be unlimited.
