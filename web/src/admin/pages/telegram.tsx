@@ -62,7 +62,14 @@ function TelegramBody({ v }: { v: View }) {
   const infrastructure = useDraft(v.infrastructure);
   const [infraError, setInfraError] = useState("");
   const changed = dirty || infrastructure.dirty;
-  const save = () =>
+  // The administrators' text can hold what is not an ID: saving it would drop that silently.
+  const [adminsInvalid, setAdminsInvalid] = useState(false);
+  const adminsKey = v.config.admin_ids?.join(",") ?? "";
+  const save = () => {
+    if (adminsInvalid) {
+      toast.error(t("telegram.admins.fix"));
+      return;
+    }
     patch.mutate(
       { ...(dirty ? { config: draft } : {}), ...(infrastructure.dirty ? { infrastructure: infrastructure.draft } : {}) },
       {
@@ -80,7 +87,9 @@ function TelegramBody({ v }: { v: View }) {
         },
       },
     );
+  };
   const discard = () => {
+    setAdminsInvalid(false);
     reset();
     infrastructure.reset();
     setInfraError("");
@@ -108,7 +117,7 @@ function TelegramBody({ v }: { v: View }) {
           <WithPreview title={t("telegram.preview")} preview={preview}>
             <MenuCard draft={draft} setDraft={setDraft} />
             <ChannelCard draft={draft} setDraft={setDraft} v={v} />
-            <AdminsCard key={v.config.admin_ids?.join(",") ?? ""} draft={draft} setDraft={setDraft} />
+            <AdminsCard key={adminsKey} draft={draft} setDraft={setDraft} onInvalid={setAdminsInvalid} />
             <TextsCard draft={draft} setDraft={setDraft} defaults={v.defaults} />
           </WithPreview>
         ) : tab === "notify" ? (

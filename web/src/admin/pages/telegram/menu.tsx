@@ -60,14 +60,16 @@ export function ChannelCard({ draft, setDraft, v }: { draft: Config; setDraft: (
  * action, so an account taken out loses its access at once. The text is kept as typed while
  * it is edited, and the list is what it says.
  */
-export function AdminsCard({ draft, setDraft }: { draft: Config; setDraft: (c: Config) => void }) {
+export function AdminsCard({ draft, setDraft, onInvalid }: { draft: Config; setDraft: (c: Config) => void; onInvalid: (invalid: boolean) => void }) {
   const ids = draft.admin_ids ?? [];
   const [text, setText] = useState(ids.join(", "));
   const { ids: parsed, bad } = parseAdminIds(text);
   const tooMany = parsed.length > MAX_ADMINS;
   const edit = (value: string) => {
+    const next = parseAdminIds(value);
     setText(value);
-    setDraft({ ...draft, admin_ids: parseAdminIds(value).ids });
+    setDraft({ ...draft, admin_ids: next.ids });
+    onInvalid(next.bad.length > 0 || next.ids.length > MAX_ADMINS);
   };
   return (
     <section {...rise(3)}>

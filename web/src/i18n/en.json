@@ -2650,7 +2650,8 @@
       "none": "Nobody may open /admin",
       "count": "{n, plural, one {# administrator} other {# administrators}}",
       "bad": "Not a Telegram ID: {list}. An ID is a positive number",
-      "tooMany": "No more than {max} administrators"
+      "tooMany": "No more than {max} administrators",
+      "fix": "Fix the list of administrators first: see the message under the field"
     },
     "channel": {
       "title": "Channel subscription",
