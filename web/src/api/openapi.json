@@ -1818,6 +1818,14 @@
       "Config": {
         "additionalProperties": false,
         "properties": {
+          "admin_ids": {
+            "description": "Telegram ID администраторов бота: им доступна команда /admin",
+            "items": {
+              "format": "int64",
+              "type": "integer"
+            },
+            "type": "array"
+          },
           "buttons": {
             "description": "Кнопки главного меню по порядку",
             "items": {

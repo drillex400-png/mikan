@@ -3475,6 +3475,8 @@ export interface components {
             sni: string;
         };
         Config: {
+            /** @description Telegram ID администраторов бота: им доступна команда /admin */
+            admin_ids?: number[];
             /** @description Кнопки главного меню по порядку */
             buttons: components["schemas"]["MenuButton"][];
             channel: components["schemas"]["Channel"];

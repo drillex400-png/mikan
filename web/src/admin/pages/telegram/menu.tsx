@@ -8,6 +8,7 @@ import { Switch, SwitchRow } from "../../../components/switch";
 import { Field, Segmented } from "../../../components/ui";
 import { t, tMaybe } from "../../../i18n";
 import { MarkdownHint, TgTextPreview } from "../telegram-text";
+import { parseAdminIds } from "./admin-ids";
 import { useSampleVars } from "./preview";
 import { rise, slide, type Config, type MenuButton, type TextKey, type View } from "./shared";
 
@@ -53,6 +54,56 @@ export function ChannelCard({ draft, setDraft, v }: { draft: Config; setDraft: (
     </section>
   );
 }
+
+/**
+ * The accounts that may open /admin in the bot. The bot checks the list again on every
+ * action, so an account taken out loses its access at once. The text is kept as typed while
+ * it is edited, and the list is what it says.
+ */
+export function AdminsCard({ draft, setDraft }: { draft: Config; setDraft: (c: Config) => void }) {
+  const ids = draft.admin_ids ?? [];
+  const [text, setText] = useState(ids.join(", "));
+  const { ids: parsed, bad } = parseAdminIds(text);
+  const tooMany = parsed.length > MAX_ADMINS;
+  const edit = (value: string) => {
+    setText(value);
+    setDraft({ ...draft, admin_ids: parseAdminIds(value).ids });
+  };
+  return (
+    <section {...rise(3)}>
+      <CardHead title={t("telegram.admins.title")} sub={t("telegram.admins.sub")} />
+      <Field label={t("telegram.admins.ids")} htmlFor="tg-admins" hint={t("telegram.admins.idsHint", { max: MAX_ADMINS })}>
+        <input
+          id="tg-admins"
+          className="input mono"
+          value={text}
+          onChange={(e) => edit(e.target.value)}
+          placeholder="123456789, 987654321"
+          inputMode="numeric"
+          autoComplete="off"
+          spellCheck={false}
+          aria-invalid={bad.length > 0 || tooMany}
+        />
+      </Field>
+      {bad.length > 0 ? (
+        <div className="banner err" role="alert">
+          <span>{t("telegram.admins.bad", { list: bad.slice(0, 3).join(", ") })}</span>
+        </div>
+      ) : tooMany ? (
+        <div className="banner err" role="alert">
+          <span>{t("telegram.admins.tooMany", { max: MAX_ADMINS })}</span>
+        </div>
+      ) : (
+        <p className="text-xs text-[var(--ink-500)]" role="status">
+          {parsed.length === 0 ? t("telegram.admins.none") : t("telegram.admins.count", { n: parsed.length })}
+        </p>
+      )}
+    </section>
+  );
+}
+
+/** As many as the bot accepts (tgbot.MaxAdmins). */
+const MAX_ADMINS = 20;
 
 const ACTIONS = ["sub", "devices", "connect", "renew", "support", "app"] as const;
 

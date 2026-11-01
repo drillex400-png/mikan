@@ -251,6 +251,7 @@
       "tg_text": "A text is longer than 3000 characters",
       "tg_channel": "Channel: a public @username (5 characters or more) or a numeric ID like -100…",
       "tg_channel_url": "The channel link must start with https:// or tg://. A channel given by its numeric ID needs one",
+      "tg_admin_ids": "Administrators: Telegram IDs are positive numbers, no repeats, up to 20",
       "bot_off": "The bot is off",
       "no_admin_chat": "Connect the admin chat above first: backups go there",
       "no_backup_password": "Set a password first: without it the backup is not encrypted",
@@ -2641,6 +2642,16 @@
     },
     "freeButton": "Free plan button",
     "freeButtonHint": "Shown while the account may take the free plan (Payments → Sales rules). Up to 40 characters",
+    "admins": {
+      "title": "Bot administrators",
+      "sub": "Accounts that may open /admin in the bot: overview, clients, extending, blocking, servers and payments. The bot checks the list on every action",
+      "ids": "Telegram IDs",
+      "idsHint": "Numeric IDs separated by commas, up to {max}. Find yours with @userinfobot. Leave empty to turn /admin off",
+      "none": "Nobody may open /admin",
+      "count": "{n, plural, one {# administrator} other {# administrators}}",
+      "bad": "Not a Telegram ID: {list}. An ID is a positive number",
+      "tooMany": "No more than {max} administrators"
+    },
     "channel": {
       "title": "Channel subscription",
       "sub": "The bot checks that the client is subscribed to your channel. The free plan may ask for it too",
