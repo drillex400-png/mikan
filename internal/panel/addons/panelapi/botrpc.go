@@ -94,6 +94,7 @@ var botRPC = map[string]rpcRule{
 	"Admin.User":        rule("users:read", []int{0}, nil),
 	"Admin.UsersBy":     rule("users:read", []int{0}, nil),
 	"Admin.Nodes":       rule("users:read", []int{0}, nil),
+	"Admin.Node":        rule("users:read", []int{0}, nil),
 	"Admin.Payments":    rule("users:read", []int{0}, nil),
 	"Admin.Payment":     rule("users:read", []int{0}, nil),
 	"Admin.Tariffs":     rule("users:read", []int{0}, nil),
@@ -108,6 +109,15 @@ var botRPC = map[string]rpcRule{
 	"Admin.ResetTraffic":    rule("users:write", []int{0}, nil),
 	"Admin.Reissue":         rule("users:write", []int{0}, nil),
 	"Admin.Delete":          rule("users:write", []int{0}, nil),
+	// The servers: reading a card needs users:read; every change, a test that loads the node,
+	// an update, a restart and a removal need users:write, like the rest of what the admin does.
+	"Admin.SetNodeEnabled": rule("users:write", []int{0}, nil),
+	"Admin.SetNodeField":   rule("users:write", []int{0}, nil),
+	"Admin.CheckNode":      rule("users:write", []int{0}, nil),
+	"Admin.SpeedNode":      rule("users:write", []int{0}, nil),
+	"Admin.UpdateNode":     rule("users:write", []int{0}, nil),
+	"Admin.RestartNode":    rule("users:write", []int{0}, nil),
+	"Admin.DeleteNode":     rule("users:write", []int{0}, nil),
 	// The broadcast: the preview counts the recipients, the send queues it. Both are the admin's
 	// and both need users:write; the panel checks the admin list again on each.
 	"Admin.BroadcastAudience": rule("users:write", []int{0}, nil),

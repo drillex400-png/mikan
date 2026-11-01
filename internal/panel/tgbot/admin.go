@@ -99,7 +99,54 @@ type AdminNode struct {
 	Host    string
 	Enabled bool
 	Online  bool
+	// What an older panel does not send is zero and the screens leave it out.
+	Local   bool // the panel's own node
+	Version string
+	Behind  bool // runs an older version than the panel
 }
+
+// AdminNodeInfo is one server's card: how it is, not how to reach it by key. It carries no
+// node key, certificate or API address.
+type AdminNodeInfo struct {
+	AdminNode
+	PublicName  string
+	Domain      string
+	Status      string // ok, error, unknown
+	Error       string // why the panel cannot reach it, as the panel words it
+	ErrorSince  int64  // unix seconds; 0: unknown
+	Inbounds    int
+	Listeners   int
+	ListenersOK int
+	Conns       int
+	CPU         float64 // percent of the whole server
+	MemUsed     uint64
+	MemTotal    uint64
+	Traffic24h  int64 // bytes, both ways
+	ChannelMbps int64 // 0: not set
+	CanUpdate   bool
+	Updating    bool // an update of it is running
+	PanelVer    string
+}
+
+// AdminSpeed is a speed test of a node.
+type AdminSpeed struct {
+	PingMs  float64
+	LossPct float64
+	DownBps int64
+	UpBps   int64
+	Error   string
+}
+
+// The fields of a server the bot may change (SetNodeField): name and public name are text, the
+// channel is Mbit/s (0 clears it).
+const (
+	NodeFieldName    = "n"
+	NodeFieldPublic  = "p"
+	NodeFieldChannel = "c"
+)
+
+// MaxNodeText is the longest name of a server the bot sets.
+const MaxNodeText = 80
 
 // AdminPayment is a payment in the admin's list.
 type AdminPayment struct {
@@ -145,6 +192,22 @@ type Admin interface {
 	// SetTariff applies a tariff to the subscription: its limits, and the term starts over.
 	SetTariff(ctx context.Context, by, id, tariff int64) (AdminUser, error)
 	Nodes(ctx context.Context, by int64) ([]AdminNode, error)
+	// Node is one server's card.
+	Node(ctx context.Context, by, id int64) (AdminNodeInfo, error)
+	// SetNodeEnabled turns the server on or off for the subscriptions.
+	SetNodeEnabled(ctx context.Context, by, id int64, on bool) (AdminNodeInfo, error)
+	// SetNodeField changes the name, the public name or the channel (NodeField*).
+	SetNodeField(ctx context.Context, by, id int64, field, value string) (AdminNodeInfo, error)
+	// CheckNode asks the server for its state at once.
+	CheckNode(ctx context.Context, by, id int64) (AdminNodeInfo, error)
+	// SpeedNode measures the server's own way to the internet.
+	SpeedNode(ctx context.Context, by, id int64) (AdminSpeed, error)
+	// UpdateNode asks the server to update itself to the panel's version.
+	UpdateNode(ctx context.Context, by, id int64) (AdminNodeInfo, error)
+	// RestartNode restarts the server's containers.
+	RestartNode(ctx context.Context, by, id int64) error
+	// DeleteNode removes the server; what went out through it goes another way.
+	DeleteNode(ctx context.Context, by, id int64) error
 	// Payments lists a page of payments, newest first; status filters ("" all, paid, pending,
 	// failed, refunded). The second result is whether there is a page after this one.
 	Payments(ctx context.Context, by int64, status string, page int) ([]AdminPayment, bool, error)

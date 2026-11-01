@@ -57,6 +57,46 @@ func (a remoteAdmin) Nodes(ctx context.Context, by int64) ([]AdminNode, error) {
 	return n, err
 }
 
+func (a remoteAdmin) node(ctx context.Context, method string, args ...any) (AdminNodeInfo, error) {
+	var n AdminNodeInfo
+	err := a.r.call(ctx, method, args, &n)
+	return n, err
+}
+
+func (a remoteAdmin) Node(ctx context.Context, by, id int64) (AdminNodeInfo, error) {
+	return a.node(ctx, "Admin.Node", by, id)
+}
+
+func (a remoteAdmin) SetNodeEnabled(ctx context.Context, by, id int64, on bool) (AdminNodeInfo, error) {
+	return a.node(ctx, "Admin.SetNodeEnabled", by, id, on)
+}
+
+func (a remoteAdmin) SetNodeField(ctx context.Context, by, id int64, field, value string) (AdminNodeInfo, error) {
+	return a.node(ctx, "Admin.SetNodeField", by, id, field, value)
+}
+
+func (a remoteAdmin) CheckNode(ctx context.Context, by, id int64) (AdminNodeInfo, error) {
+	return a.node(ctx, "Admin.CheckNode", by, id)
+}
+
+func (a remoteAdmin) SpeedNode(ctx context.Context, by, id int64) (AdminSpeed, error) {
+	var s AdminSpeed
+	err := a.r.call(ctx, "Admin.SpeedNode", []any{by, id}, &s)
+	return s, err
+}
+
+func (a remoteAdmin) UpdateNode(ctx context.Context, by, id int64) (AdminNodeInfo, error) {
+	return a.node(ctx, "Admin.UpdateNode", by, id)
+}
+
+func (a remoteAdmin) RestartNode(ctx context.Context, by, id int64) error {
+	return a.r.call(ctx, "Admin.RestartNode", []any{by, id})
+}
+
+func (a remoteAdmin) DeleteNode(ctx context.Context, by, id int64) error {
+	return a.r.call(ctx, "Admin.DeleteNode", []any{by, id})
+}
+
 func (a remoteAdmin) Payments(ctx context.Context, by int64, status string, page int) ([]AdminPayment, bool, error) {
 	var (
 		p    []AdminPayment

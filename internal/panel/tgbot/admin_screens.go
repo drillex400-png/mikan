@@ -106,6 +106,9 @@ func (b *Bot) adminMessage(ctx context.Context, m *tgapi.Message) bool {
 	if !waiting || st.kind == "" || strings.HasPrefix(text, "/") {
 		return false
 	}
+	if b.srvText(chat, st, text, aw, srvWordsFor(cfg.Lang)) {
+		return true
+	}
 	switch st.kind {
 	case "search":
 		b.adm.setQuery(b, chat, text)
@@ -195,7 +198,7 @@ func (b *Bot) adminPress(ctx context.Context, chat, msg int64, data string) bool
 	cmd, _, _ := strings.Cut(data, ":")
 	switch cmd {
 	case "a", "ao", "au", "an", "ap", "aP", "ac", "ae", "ak", "ad", "as", "az", "ab",
-		"ag", "av", "ar", "ai", "ax", "at", "aT", "aN":
+		"ag", "av", "ar", "ai", "ax", "at", "aT", "aN", "aS":
 	default:
 		return false
 	}
@@ -513,22 +516,9 @@ func (b *Bot) adminScreen(ctx context.Context, chat int64, data, notice string) 
 		return pre + html.EscapeString(aw.bcPreview) + "\n\n" + body + "\n\n" + html.EscapeString(fmt.Sprintf(aw.bcAsk2, n)),
 			kb([]tgapi.Button{{Text: aw.bcSend, CallbackData: "az:m"}}, []tgapi.Button{{Text: aw.cancel, CallbackData: "ab:x"}})
 	case "an":
-		ns, err := adm.Nodes(ctx, chat)
-		if err != nil {
-			return fail(err)
-		}
-		lines := []string{head("🖥", aw.srvTitle), ""}
-		for _, n := range ns {
-			dot, st := "🔴", aw.nodeOff
-			if n.Enabled {
-				dot, st = "🟢", aw.nodeOn
-			}
-			lines = append(lines, dot+" <b>"+html.EscapeString(n.Name)+"</b> · "+html.EscapeString(st))
-		}
-		if len(ns) == 0 {
-			lines = append(lines, html.EscapeString(aw.noNodes))
-		}
-		return pre + strings.Join(lines, "\n"), kb([]tgapi.Button{{Text: aw.refresh, CallbackData: "an"}}, home)
+		return b.srvList(ctx, adm, chat, aw, srvWordsFor(cfg.Lang), pre, fail, home)
+	case "aS":
+		return b.srvScreen(ctx, adm, chat, arg, aw, srvWordsFor(cfg.Lang), pre, fail, home)
 	case "ap": // ap:<filter>:<page>; the filter is a letter, "" all
 		fl, pgS, _ := strings.Cut(arg, ":")
 		status := payFilterStatus(fl)

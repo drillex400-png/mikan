@@ -515,43 +515,14 @@ func serversLeft(ctx context.Context, q *db.Queries, nodeID, inboundID int64) er
 }
 
 func (h *handlers) deleteNode(ctx context.Context, in *nodeIDInput) (*struct{}, error) {
-	n, err := h.getNode(ctx, in.ID)
-	if err != nil {
+	if _, err := h.getNode(ctx, in.ID); err != nil {
 		return nil, err
 	}
-	if n.Address == "" {
-		return nil, huma.Error409Conflict("local_node")
-	}
-	var moved []domain.MovedExit
-	err = h.d.Store.Tx(ctx, func(q *db.Queries) error {
-		// What went out through the node goes through another one, or straight out: the
-		// cascade does not keep the node from going.
-		var err error
-		if moved, err = domain.MoveExits(ctx, q, n.ID, h.d.Now(), h.hostOf); err != nil {
-			return err
-		}
-		if err := h.nodeUnused(ctx, q, n.ID); err != nil {
-			return err
-		}
-		if err := q.DeleteNode(ctx, n.ID); err != nil {
-			return err
-		}
-		// The bot's route may still name it from when it went through it: the admin
-		// panel would offer a node that is gone.
-		set := settings.New(q)
-		if route, ok, err := settings.Get[tgate.Route](ctx, set, tgate.KeyRoute); err != nil {
-			return err
-		} else if ok && route.NodeID == n.ID {
-			route.NodeID = 0
-			if err := settings.Set(ctx, set, tgate.KeyRoute, route); err != nil {
-				return err
-			}
-		}
-		return q.DeleteNodeStateOf(ctx, strconv.FormatInt(n.ID, 10))
-	})
+	gone, err := domain.DeleteNode(ctx, h.d.Store, in.ID, h.d.Now(), tgate.NodeRelease(h.hostOf))
 	if err != nil {
-		return nil, err
+		return nil, nodeDeleteErr(err)
 	}
+	n := gone.Node
 	if h.d.Nodes != nil {
 		// Best effort: an unreachable node keeps serving until it is reinstalled.
 		if err := h.d.Nodes.Retire(ctx, n.ID); err != nil {
@@ -563,8 +534,22 @@ func (h *handlers) deleteNode(ctx context.Context, in *nodeIDInput) (*struct{}, 
 	// that gets this id later (see forgetNode) inherits them.
 	h.forgetNode(n.ID)
 	h.d.Changes.SlotsChanged()
-	h.audit(ctx, sessionOf(ctx).AdminID, "node.delete", "node", strconv.FormatInt(n.ID, 10), map[string]any{"name": n.Name, "exits_moved": moved})
+	h.audit(ctx, sessionOf(ctx).AdminID, "node.delete", "node", strconv.FormatInt(n.ID, 10), map[string]any{"name": n.Name, "exits_moved": gone.Moved})
 	return nil, nil
+}
+
+// nodeDeleteErr is what the removal refused, the way the UI reads it.
+func nodeDeleteErr(err error) error {
+	var left *domain.TariffServersError
+	switch {
+	case errors.Is(err, domain.ErrNodeLocal):
+		return huma.Error409Conflict("local_node")
+	case errors.Is(err, domain.ErrNodeInUse):
+		return huma.Error409Conflict("node_in_use", &huma.ErrorDetail{Location: "path.id", Message: "node_in_use_telegram"})
+	case errors.As(err, &left):
+		return huma.Error409Conflict("tariff_servers", &huma.ErrorDetail{Location: "path.id", Message: "tariff_servers", Value: strings.Join(left.Names, ", ")})
+	}
+	return err
 }
 
 // nodesChanged tells the node syncer to look at the nodes again; the panel may run

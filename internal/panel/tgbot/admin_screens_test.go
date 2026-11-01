@@ -26,6 +26,9 @@ type fakeAdmin struct {
 	usersByErr error
 	filters    []string
 	none       bool // the filter finds nobody
+	// nodeErr is what the server actions answer with; node is the server's card.
+	nodeErr error
+	node    AdminNodeInfo
 }
 
 func (f *fakeAdmin) rec(s string) { f.calls = append(f.calls, s) }
@@ -93,7 +96,48 @@ func (f *fakeAdmin) SetTariff(context.Context, int64, int64, int64) (AdminUser, 
 	return f.user, nil
 }
 func (f *fakeAdmin) Nodes(context.Context, int64) ([]AdminNode, error) {
-	return []AdminNode{{ID: 1, Name: "NL-1", Enabled: true}, {ID: 2, Name: "DE-1"}}, nil
+	return []AdminNode{{ID: 1, Name: "NL-1", Enabled: true, Online: true}, {ID: 2, Name: "DE-1"}}, nil
+}
+func (f *fakeAdmin) Node(_ context.Context, _, id int64) (AdminNodeInfo, error) {
+	if f.node.ID == 0 {
+		f.node = AdminNodeInfo{AdminNode: AdminNode{ID: 1, Name: "NL-<1>", Host: "nl.example", Enabled: true, Online: true, Version: "0.5.2.1-rc.10", Behind: true},
+			Status: "ok", CPU: 12, MemUsed: 1 << 30, MemTotal: 4 << 30, Conns: 7, Listeners: 3, ListenersOK: 3, Inbounds: 4, Traffic24h: 5 << 30, CanUpdate: true}
+	}
+	if id != f.node.ID {
+		return AdminNodeInfo{}, model.ErrNotFound
+	}
+	return f.node, nil
+}
+func (f *fakeAdmin) nodeAct(name string) (AdminNodeInfo, error) {
+	f.rec(name)
+	return f.node, f.nodeErr
+}
+func (f *fakeAdmin) SetNodeEnabled(_ context.Context, _, _ int64, on bool) (AdminNodeInfo, error) {
+	if on {
+		return f.nodeAct("node_on")
+	}
+	return f.nodeAct("node_off")
+}
+func (f *fakeAdmin) SetNodeField(_ context.Context, _, _ int64, field, v string) (AdminNodeInfo, error) {
+	return f.nodeAct("node_field:" + field + "=" + v)
+}
+func (f *fakeAdmin) CheckNode(context.Context, int64, int64) (AdminNodeInfo, error) {
+	return f.nodeAct("node_check")
+}
+func (f *fakeAdmin) SpeedNode(context.Context, int64, int64) (AdminSpeed, error) {
+	f.rec("node_speed")
+	return AdminSpeed{PingMs: 12, LossPct: 0.5, DownBps: 90e6, UpBps: 40e6}, f.nodeErr
+}
+func (f *fakeAdmin) UpdateNode(context.Context, int64, int64) (AdminNodeInfo, error) {
+	return f.nodeAct("node_update")
+}
+func (f *fakeAdmin) RestartNode(context.Context, int64, int64) error {
+	_, err := f.nodeAct("node_restart")
+	return err
+}
+func (f *fakeAdmin) DeleteNode(context.Context, int64, int64) error {
+	_, err := f.nodeAct("node_delete")
+	return err
 }
 func (f *fakeAdmin) Payments(context.Context, int64, string, int) ([]AdminPayment, bool, error) {
 	return []AdminPayment{{ID: 7, User: "Анна", Status: "applied", Amount: 15000, Currency: "RUB", At: time.Unix(1790000000, 0)}}, true, nil
@@ -171,7 +215,7 @@ func TestAdminScreensDraw(t *testing.T) {
 // pressKnown says whether the bot answers a callback code as the admin's.
 func (b *Bot) pressKnown(cmd string) (string, bool) {
 	switch cmd {
-	case "a", "ao", "au", "an", "ap", "aP", "ac", "ae", "ak", "ad", "as", "az", "ab", "ag", "av", "ar", "ai", "ax", "at", "aT", "aN":
+	case "a", "ao", "au", "an", "ap", "aP", "ac", "ae", "ak", "ad", "as", "az", "ab", "ag", "av", "ar", "ai", "ax", "at", "aT", "aN", "aS":
 		return cmd, true
 	}
 	return "", false
