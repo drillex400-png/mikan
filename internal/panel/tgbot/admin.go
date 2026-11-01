@@ -218,4 +218,7 @@ type Admin interface {
 	// Broadcast queues the text for every account with a subscription and returns how many
 	// will get it. One at a time: a second one while it is being sent is refused.
 	Broadcast(ctx context.Context, by int64, text string) (int, error)
+	// NoteGrowth writes the referral programme's new settings to the audit log under the
+	// admin's account. The bot calls it before it saves them, so no change goes unrecorded.
+	NoteGrowth(ctx context.Context, by int64, enabled bool, inviterDays, friendDays int64) error
 }

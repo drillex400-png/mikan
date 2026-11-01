@@ -146,7 +146,8 @@ func (f *fakeAdmin) Payment(context.Context, int64, int64) (AdminPaymentInfo, er
 	return AdminPaymentInfo{AdminPayment: AdminPayment{ID: 7, User: "Анна", Status: "failed", Amount: 15000, Currency: "RUB", Provider: "stars"},
 		Kind: "renew", Tariff: "Месяц", TermDays: 30, Error: "timeout", UserID: 5}, nil
 }
-func (f *fakeAdmin) BroadcastAudience(context.Context, int64) (int, error) { return 3, nil }
+func (f *fakeAdmin) NoteGrowth(context.Context, int64, bool, int64, int64) error { return nil }
+func (f *fakeAdmin) BroadcastAudience(context.Context, int64) (int, error)       { return 3, nil }
 func (f *fakeAdmin) Broadcast(context.Context, int64, string) (int, error) {
 	f.rec("broadcast")
 	return 3, nil
@@ -218,7 +219,7 @@ func TestAdminScreensDraw(t *testing.T) {
 // pressKnown says whether the bot answers a callback code as the admin's.
 func (b *Bot) pressKnown(cmd string) (string, bool) {
 	switch cmd {
-	case "a", "ao", "au", "an", "ap", "aP", "ac", "ae", "ak", "ad", "as", "az", "ab", "ag", "av", "ar", "ai", "ax", "at", "aT", "aN", "aS":
+	case "a", "ao", "au", "an", "ap", "aP", "ac", "ae", "ak", "ad", "as", "az", "ab", "ag", "av", "ar", "ai", "ax", "at", "aT", "aN", "aS", "aG":
 		return cmd, true
 	}
 	return "", false

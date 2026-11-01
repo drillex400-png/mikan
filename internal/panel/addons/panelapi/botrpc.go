@@ -122,6 +122,8 @@ var botRPC = map[string]rpcRule{
 	// and both need users:write; the panel checks the admin list again on each.
 	"Admin.BroadcastAudience": rule("users:write", []int{0}, nil),
 	"Admin.Broadcast":         rule("users:write", []int{0}, nil),
+	// The referral programme's settings are noted in the journal before the bot saves them.
+	"Admin.NoteGrowth": rule("users:write", []int{0}, nil),
 }
 
 // talkWindow: how long an account counts as talking to the bot after its last message.

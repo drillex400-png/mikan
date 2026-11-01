@@ -617,3 +617,38 @@ func since(f *fakeTelegram, from int) []call {
 	defer f.mu.Unlock()
 	return append([]call(nil), f.calls[from:]...)
 }
+
+// A change of the referral programme's settings is the admin's alone and is written to the
+// journal with the admin's account; a stranger or a silly number leaves no line.
+func TestAdminNoteGrowth(t *testing.T) {
+	e := setup(t)
+	setAdmins(t, e, adminTg)
+	a := e.local.Admin()
+	ctx := context.Background()
+
+	for _, by := range []int64{0, 1, -adminTg, adminTg + 1} {
+		if err := a.NoteGrowth(ctx, by, true, 7, 7); !errors.Is(err, model.ErrNotAdmin) {
+			t.Fatalf("for %d: %v", by, err)
+		}
+	}
+	for _, bad := range [][2]int64{{-1, 7}, {7, -1}, {366, 7}, {7, 366}} {
+		if err := a.NoteGrowth(ctx, adminTg, true, bad[0], bad[1]); !errors.Is(err, model.ErrAdminInput) {
+			t.Fatalf("%v: %v", bad, err)
+		}
+	}
+	for _, act := range auditActions(t, e) {
+		if act == "growth.settings" {
+			t.Fatal("a refused change was logged")
+		}
+	}
+	if err := a.NoteGrowth(ctx, adminTg, true, 14, 3); err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, act := range auditActions(t, e) {
+		found = found || act == "growth.settings"
+	}
+	if !found {
+		t.Fatal("the change was not logged")
+	}
+}

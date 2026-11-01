@@ -240,6 +240,20 @@ func (a admin) BroadcastAudience(ctx context.Context, by int64) (int, error) {
 	return len(targets), err
 }
 
+// NoteGrowth records a change of the referral programme's settings: numbers and a flag only.
+func (a admin) NoteGrowth(ctx context.Context, by int64, enabled bool, inviterDays, friendDays int64) error {
+	if err := a.check(ctx, by); err != nil {
+		return err
+	}
+	if inviterDays < 0 || friendDays < 0 || inviterDays > 365 || friendDays > 365 {
+		return model.ErrAdminInput
+	}
+	return audit.Write(ctx, a.l.Store.Q, a.now(), audit.Entry{
+		Action: "growth.settings", TargetType: "addon", TargetID: "mikan-bot",
+		Details: map[string]any{"actor": actor(by), "enabled": enabled, "inviter_days": inviterDays, "friend_days": friendDays},
+	})
+}
+
 // Broadcast sends through the same path as the admin panel's broadcast, so the rate limit,
 // the one-at-a-time rule and the progress are the same. The text is checked here too: the bot
 // has checked it, but the panel does not rely on that.

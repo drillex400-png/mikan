@@ -487,6 +487,30 @@ func (c *Client) SetCommands(ctx context.Context, desc string) error {
 	return c.call(ctx, "setMyCommands", map[string]any{"commands": []map[string]string{{"command": "start", "description": desc}}}, nil)
 }
 
+// Command is one entry of the command menu.
+type Command struct{ Name, Desc string }
+
+func commandList(cs []Command) []map[string]string {
+	out := make([]map[string]string, 0, len(cs))
+	for _, c := range cs {
+		out = append(out, map[string]string{"command": c.Name, "description": c.Desc})
+	}
+	return out
+}
+
+// SetCommandList sets the bot's default command menu to cs.
+func (c *Client) SetCommandList(ctx context.Context, cs []Command) error {
+	return c.call(ctx, "setMyCommands", map[string]any{"commands": commandList(cs)}, nil)
+}
+
+// SetChatCommandList sets the command menu of one private chat to cs.
+func (c *Client) SetChatCommandList(ctx context.Context, chat int64, cs []Command) error {
+	return c.call(ctx, "setMyCommands", map[string]any{
+		"commands": commandList(cs),
+		"scope":    map[string]any{"type": "chat", "chat_id": chat},
+	}, nil)
+}
+
 // SetChatCommands shows /start and /admin in the command menu of one private chat, the
 // admin's: Telegram's "chat" scope overrides the bot's default list for that chat alone, so
 // every other chat keeps seeing /start only.

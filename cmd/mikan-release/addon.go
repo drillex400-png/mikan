@@ -67,9 +67,10 @@ func makeAddon(args []string) error {
 		Protocol: addons.Protocol2,
 		Kind:     addons.KindBot,
 		Mode:     addons.ModeClient,
-		// The same permissions as the official bot's: the admin's screens ask for nothing more
-		// (users:read and users:write in botpanel/rpc.go).
-		Permissions: []string{"bot", "users:read", "users:write", "billing:invoice", "events", "kv"},
+		// The official bot's permissions, and the two the referral programme needs: kv for who
+		// invited whom, users:all to find the inviter's subscription and users:grant to give the
+		// days (each under a key, so a retry never gives twice). The admin approves them in Addons.
+		Permissions: []string{"bot", "users:read", "users:write", "users:all", "users:grant", "billing:invoice", "events", "kv"},
 		Image:       *image,
 		Digest:      *digest,
 		MinPanel:    *minPanel,

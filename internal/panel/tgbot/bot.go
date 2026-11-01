@@ -42,6 +42,8 @@ type Bot struct {
 	refused   map[string]time.Time
 	// adm is what the admin's screens remember (admin_screens.go).
 	adm adminMem
+	// sayHook, when set, takes the plain messages instead of the outbox (tests).
+	sayHook func(chat int64, text string)
 }
 
 func New(d Deps) *Bot {
@@ -60,7 +62,8 @@ func (b *Bot) Started(ctx context.Context) error {
 	if url != "" {
 		text = w.menuApp
 	}
-	return errors.Join(b.d.Client.SetCommands(ctx, w.commands), b.d.Client.SetMenuButton(ctx, text, url))
+	cs, _ := b.commandMenu(ctx, false)
+	return errors.Join(b.d.Client.SetCommandList(ctx, cs), b.d.Client.SetMenuButton(ctx, text, url))
 }
 
 // Update takes a message or a press in a private chat, the flood guard passed. It is
@@ -95,6 +98,9 @@ func (b *Bot) onMessage(ctx context.Context, m *tgapi.Message) {
 	if b.adminMessage(ctx, m) {
 		return
 	}
+	if b.inviteMessage(ctx, m) {
+		return
+	}
 	chat := m.Chat.ID
 	cfg := b.config(ctx)
 	w := wordsFor(cfg.Lang)
@@ -118,6 +124,8 @@ func (b *Bot) onMessage(ctx context.Context, m *tgapi.Message) {
 		if _, err := b.d.Backend.TagCampaign(ctx, chat, code); err != nil {
 			b.d.Log.Warn("telegram: campaign", "err", err)
 		}
+	case strings.HasPrefix(text, "/start ") && b.startInvitation(ctx, chat, strings.TrimSpace(strings.TrimPrefix(text, "/start "))):
+		// An invitation: noted for the programme, the menu greets the newcomer as usual.
 	case strings.HasPrefix(text, "/start "):
 		notice = b.linkByCode(ctx, w, chat, who(m.From), strings.TrimSpace(strings.TrimPrefix(text, "/start ")))
 	default:

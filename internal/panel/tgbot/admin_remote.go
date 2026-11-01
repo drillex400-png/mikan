@@ -152,6 +152,10 @@ func (a remoteAdmin) Tariffs(ctx context.Context, by int64) ([]AdminTariff, erro
 	return t, err
 }
 
+func (a remoteAdmin) NoteGrowth(ctx context.Context, by int64, enabled bool, inviterDays, friendDays int64) error {
+	return a.r.call(ctx, "Admin.NoteGrowth", []any{by, enabled, inviterDays, friendDays})
+}
+
 func (a remoteAdmin) BroadcastAudience(ctx context.Context, by int64) (int, error) {
 	var n int
 	err := a.r.call(ctx, "Admin.BroadcastAudience", []any{by}, &n)
