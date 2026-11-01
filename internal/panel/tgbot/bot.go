@@ -40,6 +40,8 @@ type Bot struct {
 	// Subscriptions somebody asked to take over: by subscription, and who was refused.
 	transfers map[int64]transfer
 	refused   map[string]time.Time
+	// adm is what the admin's screens remember (admin_screens.go).
+	adm adminMem
 }
 
 func New(d Deps) *Bot {
@@ -69,6 +71,8 @@ func (b *Bot) Update(ctx context.Context, up tgapi.Update) {
 	case up.CallbackQuery != nil && up.CallbackQuery.Message != nil:
 		if cmd, _, _ := strings.Cut(up.CallbackQuery.Data, ":"); cmd == "ta" || cmd == "tx" {
 			b.onTransfer(ctx, up.CallbackQuery)
+		} else if q := up.CallbackQuery; b.adminPress(ctx, q.Message.Chat.ID, q.Message.MessageID, q.Data) {
+			b.answer(ctx, q.ID) // an admin's tap: the admin's screens drew it
 		} else {
 			b.onPress(ctx, up.CallbackQuery)
 		}
@@ -86,6 +90,11 @@ const maxLinksRead = 3
 // onMessage: /start (with a code from a subscription page), a subscription link, or
 // anything else — every message brings the main menu back to the bottom of the chat.
 func (b *Bot) onMessage(ctx context.Context, m *tgapi.Message) {
+	// /admin and what an admin was asked to type belong to the admin's screens; for anyone
+	// else this returns false at once and the subscribers' screens go on as before.
+	if b.adminMessage(ctx, m) {
+		return
+	}
 	chat := m.Chat.ID
 	cfg := b.config(ctx)
 	w := wordsFor(cfg.Lang)
