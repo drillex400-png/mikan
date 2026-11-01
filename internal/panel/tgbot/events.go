@@ -19,7 +19,8 @@ import (
 
 // EventTypes are the events HandleEvent acts on.
 var EventTypes = []string{events.PaymentPaid, events.PaymentRefunded, events.TrialNotGiven,
-	events.UserExpiring, events.UserExpired, events.Traffic90, events.Traffic100, events.BalanceTopup}
+	events.UserExpiring, events.UserExpired, events.Traffic90, events.Traffic100, events.BalanceTopup,
+	events.UserCreated, events.NodeDown, events.NodeUp}
 
 // gone: the subscription of a payment is not there for the bot any more: deleted, or moved to
 // an account that is not talking to it. Retrying would not change that.
@@ -30,6 +31,9 @@ func gone(err error) bool {
 // HandleEvent sends what an event of the panel asks the bot to say. An error leaves the
 // event unacknowledged, to come again.
 func (b *Bot) HandleEvent(ctx context.Context, e events.Event) error {
+	// The admins are told first and on their own: the subscriber's side below returns early
+	// for an event with no account to thank, and the admins' notice does not depend on that.
+	b.tellAdmins(ctx, e)
 	switch e.Type {
 	case events.PaymentPaid, events.PaymentRefunded:
 		var p events.Payment

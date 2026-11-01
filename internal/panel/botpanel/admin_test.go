@@ -3,6 +3,7 @@ package botpanel
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -40,6 +41,20 @@ func auditActions(t *testing.T, e *env) []string {
 	return out
 }
 
+// auditDump is everything the log holds, as one string: for checking what must not be in it.
+func auditDump(t *testing.T, e *env) string {
+	t.Helper()
+	rows, err := e.st.Q.ListAudit(e.ctx, db.ListAuditParams{BeforeID: 1 << 62, Lim: 200})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var b strings.Builder
+	for _, r := range rows {
+		b.WriteString(fmt.Sprintf("%+v\n", r))
+	}
+	return b.String()
+}
+
 // Whoever is not in the list of admins gets nothing from any admin call and changes nothing,
 // whatever the bot decided to show.
 func TestAdminRefusesAStranger(t *testing.T) {
@@ -66,8 +81,25 @@ func TestAdminRefusesAStranger(t *testing.T) {
 		if _, err := a.Nodes(ctx, by); !errors.Is(err, model.ErrNotAdmin) {
 			t.Errorf("Nodes by %d: %v", by, err)
 		}
-		if _, err := a.Payments(ctx, by); !errors.Is(err, model.ErrNotAdmin) {
+		if _, _, err := a.Payments(ctx, by, "", 0); !errors.Is(err, model.ErrNotAdmin) {
 			t.Errorf("Payments by %d: %v", by, err)
+		}
+		// Every other call of the card refuses a stranger as well, with nothing changed.
+		id := e.user.ID
+		refused := map[string]error{}
+		_, refused["Payment"] = a.Payment(ctx, by, 1)
+		_, refused["SetTrafficLimit"] = a.SetTrafficLimit(ctx, by, id, 10)
+		_, refused["SetDeviceLimit"] = a.SetDeviceLimit(ctx, by, id, 2)
+		_, refused["SetNote"] = a.SetNote(ctx, by, id, "x")
+		_, refused["SetTariff"] = a.SetTariff(ctx, by, id, 1)
+		_, refused["ResetTraffic"] = a.ResetTraffic(ctx, by, id)
+		_, refused["Reissue"] = a.Reissue(ctx, by, id)
+		_, refused["Tariffs"] = a.Tariffs(ctx, by)
+		refused["Delete"] = a.Delete(ctx, by, id)
+		for name, err := range refused {
+			if !errors.Is(err, model.ErrNotAdmin) {
+				t.Errorf("%s by %d: %v", name, by, err)
+			}
 		}
 	}
 	after, err := e.st.Q.GetUser(ctx, e.user.ID)
@@ -185,10 +217,94 @@ func TestAdminReads(t *testing.T) {
 	if _, err := a.Nodes(ctx, adminTg); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := a.Payments(ctx, adminTg); err != nil {
+	if _, _, err := a.Payments(ctx, adminTg, "", 0); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := a.Payments(ctx, adminTg, "no-such-status", 0); !errors.Is(err, model.ErrAdminInput) {
+		t.Fatalf("an unknown status filter: %v", err)
+	}
+	if _, err := a.Tariffs(ctx, adminTg); err != nil {
 		t.Fatal(err)
 	}
 }
+
+// What the card changes: each change takes effect, is written to the log under the admin, and
+// the log holds no note text and no link. Out-of-range input is refused and changes nothing.
+func TestAdminCardChanges(t *testing.T) {
+	e := setup(t)
+	setAdmins(t, e, adminTg)
+	a := e.local.Admin()
+	ctx := context.Background()
+	id := e.user.ID
+
+	v, err := a.SetTrafficLimit(ctx, adminTg, id, 50)
+	if err != nil || v.Limit != 50<<30 {
+		t.Fatalf("traffic limit: %+v %v", v, err)
+	}
+	if v, err = a.SetTrafficLimit(ctx, adminTg, id, 0); err != nil || v.Limit != 0 {
+		t.Fatalf("traffic limit cleared: %+v %v", v, err)
+	}
+	if v, err = a.SetDeviceLimit(ctx, adminTg, id, 3); err != nil || v.DeviceLimit != 3 {
+		t.Fatalf("device limit: %+v %v", v, err)
+	}
+	if v, err = a.SetDeviceLimit(ctx, adminTg, id, 0); err != nil || v.DeviceLimit != 0 {
+		t.Fatalf("device limit cleared: %+v %v", v, err)
+	}
+	if v, err = a.SetNote(ctx, adminTg, id, "  secret-note-text  "); err != nil || v.Note != "secret-note-text" {
+		t.Fatalf("note: %+v %v", v, err)
+	}
+	if v, err = a.SetNote(ctx, adminTg, id, ""); err != nil || v.Note != "" {
+		t.Fatalf("note cleared: %+v %v", v, err)
+	}
+	if _, err = a.ResetTraffic(ctx, adminTg, id); err != nil {
+		t.Fatalf("reset: %v", err)
+	}
+	if _, err = a.Reissue(ctx, adminTg, id); err != nil {
+		t.Fatalf("reissue: %v", err)
+	}
+
+	for name, err := range map[string]error{
+		"gb<0":     second(a.SetTrafficLimit(ctx, adminTg, id, -1)),
+		"gb big":   second(a.SetTrafficLimit(ctx, adminTg, id, tgbot.MaxLimitGB+1)),
+		"dev<0":    second(a.SetDeviceLimit(ctx, adminTg, id, -1)),
+		"dev big":  second(a.SetDeviceLimit(ctx, adminTg, id, tgbot.MaxDevices+1)),
+		"note big": second(a.SetNote(ctx, adminTg, id, strings.Repeat("я", tgbot.MaxNote+1))),
+		"tariff 0": second(a.SetTariff(ctx, adminTg, id, 0)),
+	} {
+		if !errors.Is(err, model.ErrAdminInput) {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+	if _, err := a.SetTariff(ctx, adminTg, id, 999999); !errors.Is(err, model.ErrNotFound) {
+		t.Errorf("a tariff that does not exist: %v", err)
+	}
+	if _, err := a.User(ctx, adminTg, 999999); !errors.Is(err, model.ErrNotFound) {
+		t.Errorf("a user that does not exist: %v", err)
+	}
+
+	got := strings.Join(auditActions(t, e), ",")
+	for _, want := range []string{"tgadmin.traffic_limit", "tgadmin.device_limit", "tgadmin.note", "tgadmin.reset_traffic", "tgadmin.reissue"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("the log has no %s: %s", want, got)
+		}
+	}
+	if strings.Contains(auditDump(t, e), "secret-note-text") {
+		t.Error("the note's text reached the audit log")
+	}
+
+	// Deleting: the subscription is gone and the log names it.
+	if err := a.Delete(ctx, adminTg, id); err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+	if _, err := a.User(ctx, adminTg, id); !errors.Is(err, model.ErrNotFound) {
+		t.Fatalf("after delete: %v", err)
+	}
+	if err := a.Delete(ctx, adminTg, id); !errors.Is(err, model.ErrNotFound) {
+		t.Fatalf("a second delete: %v", err)
+	}
+}
+
+func second[T any](_ T, err error) error { return err }
 
 // The whole way, as the addon takes it: Telegram, the bot, the RPC, the panel. A subscriber's
 // /admin does nothing admin; an admin's opens the screens, and a change goes through a

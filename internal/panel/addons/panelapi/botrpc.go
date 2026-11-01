@@ -94,8 +94,19 @@ var botRPC = map[string]rpcRule{
 	"Admin.User":        rule("users:read", []int{0}, nil),
 	"Admin.Nodes":       rule("users:read", []int{0}, nil),
 	"Admin.Payments":    rule("users:read", []int{0}, nil),
+	"Admin.Payment":     rule("users:read", []int{0}, nil),
+	"Admin.Tariffs":     rule("users:read", []int{0}, nil),
 	"Admin.GrantDays":   rule("users:write", []int{0}, nil),
 	"Admin.SetDisabled": rule("users:write", []int{0}, nil),
+	// What the card changes beyond the term and the block. Deleting is the admin's own act on a
+	// subscription that may belong to anybody, so it needs users:write like the rest.
+	"Admin.SetTrafficLimit": rule("users:write", []int{0}, nil),
+	"Admin.SetDeviceLimit":  rule("users:write", []int{0}, nil),
+	"Admin.SetNote":         rule("users:write", []int{0}, nil),
+	"Admin.SetTariff":       rule("users:write", []int{0}, nil),
+	"Admin.ResetTraffic":    rule("users:write", []int{0}, nil),
+	"Admin.Reissue":         rule("users:write", []int{0}, nil),
+	"Admin.Delete":          rule("users:write", []int{0}, nil),
 	// The broadcast: the preview counts the recipients, the send queues it. Both are the admin's
 	// and both need users:write; the panel checks the admin list again on each.
 	"Admin.BroadcastAudience": rule("users:write", []int{0}, nil),

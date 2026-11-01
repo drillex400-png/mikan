@@ -98,6 +98,12 @@ func (a admin) view(ctx context.Context, u db.User) tgbot.AdminUser {
 	if n, err := a.l.DeviceCount(ctx, u.ID); err == nil {
 		v.Devices = n
 	}
+	v.DeviceLimit, v.Note, v.CreatedAt = u.DeviceLimit.Int64, u.Note, u.CreatedAt
+	if u.TariffID.Valid {
+		if t, err := a.l.Store.Q.GetTariff(ctx, u.TariffID.Int64); err == nil {
+			v.Tariff = t.Name
+		}
+	}
 	if tg, err := a.l.Owner(ctx, u.ID); err == nil {
 		v.TgID = tg
 	}
@@ -200,25 +206,6 @@ func (a admin) Nodes(ctx context.Context, by int64) ([]tgbot.AdminNode, error) {
 			host = n.Domain
 		}
 		out = append(out, tgbot.AdminNode{ID: n.ID, Name: n.Name, Host: host, Enabled: n.Enabled == 1})
-	}
-	return out, nil
-}
-
-func (a admin) Payments(ctx context.Context, by int64) ([]tgbot.AdminPayment, error) {
-	if err := a.check(ctx, by); err != nil {
-		return nil, err
-	}
-	rows, err := a.l.Store.Q.ListPayments(ctx, db.ListPaymentsParams{BeforeID: 1 << 62, Lim: tgbot.AdminPageSize})
-	if err != nil {
-		return nil, err
-	}
-	out := make([]tgbot.AdminPayment, 0, len(rows))
-	for _, r := range rows {
-		p := r.Payment
-		out = append(out, tgbot.AdminPayment{
-			ID: p.ID, User: r.UserName, Provider: p.Provider, Status: p.Status,
-			Amount: p.Amount, Currency: p.Currency, At: time.Unix(p.CreatedAt, 0),
-		})
 	}
 	return out, nil
 }
