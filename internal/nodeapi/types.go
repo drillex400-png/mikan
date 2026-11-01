@@ -493,6 +493,11 @@ type Exit struct {
 	Name     string          `json:"name"` // the proxy's name in rules, NODE-<id>
 	Proxy    json.RawMessage `json:"proxy"`
 	Inbounds []string        `json:"inbounds"`
+	// RUDirect: of these inbounds, the traffic to Russian sites and addresses leaves the
+	// node itself, and only the rest goes on to the exit (geosite category-ru and geoip ru).
+	// Names the listeners that take it; a subset of Inbounds. Nodes older than it ignore it
+	// and send everything on.
+	RUDirect []string `json:"ru_direct,omitempty"`
 }
 
 // ExitName is the proxy name of node id as an exit.

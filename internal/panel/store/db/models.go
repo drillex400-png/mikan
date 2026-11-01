@@ -149,6 +149,11 @@ type BoundDevice struct {
 	Name      string
 }
 
+type CascadeRuDirect struct {
+	InboundID   sql.NullInt64
+	RelayNodeID sql.NullInt64
+}
+
 type Campaign struct {
 	ID        int64
 	Code      string

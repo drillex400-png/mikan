@@ -26,6 +26,24 @@ func (q *Queries) AddRelayUser(ctx context.Context, arg AddRelayUserParams) erro
 	return err
 }
 
+const clearInboundRUDirect = `-- name: ClearInboundRUDirect :exec
+DELETE FROM cascade_ru_direct WHERE inbound_id = $1
+`
+
+func (q *Queries) ClearInboundRUDirect(ctx context.Context, inboundID sql.NullInt64) error {
+	_, err := q.db.ExecContext(ctx, clearInboundRUDirect, inboundID)
+	return err
+}
+
+const clearRelayRUDirect = `-- name: ClearRelayRUDirect :exec
+DELETE FROM cascade_ru_direct WHERE relay_node_id = $1
+`
+
+func (q *Queries) ClearRelayRUDirect(ctx context.Context, relayNodeID sql.NullInt64) error {
+	_, err := q.db.ExecContext(ctx, clearRelayRUDirect, relayNodeID)
+	return err
+}
+
 const createNodeRelay = `-- name: CreateNodeRelay :one
 INSERT INTO node_relays (node_id, port, config, created_at) VALUES ($1, $2, $3, $4)
 ON CONFLICT (node_id) DO UPDATE SET node_id = excluded.node_id
@@ -153,6 +171,60 @@ func (q *Queries) ListRelayUsers(ctx context.Context, exitNodeID int64) ([]Relay
 	return items, nil
 }
 
+const listRUDirectInbounds = `-- name: ListRUDirectInbounds :many
+SELECT inbound_id FROM cascade_ru_direct WHERE inbound_id IS NOT NULL
+`
+
+func (q *Queries) ListRUDirectInbounds(ctx context.Context) ([]sql.NullInt64, error) {
+	rows, err := q.db.QueryContext(ctx, listRUDirectInbounds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []sql.NullInt64{}
+	for rows.Next() {
+		var inboundID sql.NullInt64
+		if err := rows.Scan(&inboundID); err != nil {
+			return nil, err
+		}
+		items = append(items, inboundID)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRUDirectRelays = `-- name: ListRUDirectRelays :many
+SELECT relay_node_id FROM cascade_ru_direct WHERE relay_node_id IS NOT NULL
+`
+
+func (q *Queries) ListRUDirectRelays(ctx context.Context) ([]sql.NullInt64, error) {
+	rows, err := q.db.QueryContext(ctx, listRUDirectRelays)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []sql.NullInt64{}
+	for rows.Next() {
+		var relayNodeID sql.NullInt64
+		if err := rows.Scan(&relayNodeID); err != nil {
+			return nil, err
+		}
+		items = append(items, relayNodeID)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const setInboundExit = `-- name: SetInboundExit :exec
 UPDATE inbounds SET exit_node_id = $1, outbound = $2 WHERE id = $3
 `
@@ -165,6 +237,15 @@ type SetInboundExitParams struct {
 
 func (q *Queries) SetInboundExit(ctx context.Context, arg SetInboundExitParams) error {
 	_, err := q.db.ExecContext(ctx, setInboundExit, arg.ExitNodeID, arg.Outbound, arg.ID)
+	return err
+}
+
+const setInboundRUDirect = `-- name: SetInboundRUDirect :exec
+INSERT INTO cascade_ru_direct (inbound_id) VALUES ($1) ON CONFLICT (inbound_id) WHERE inbound_id IS NOT NULL DO NOTHING
+`
+
+func (q *Queries) SetInboundRUDirect(ctx context.Context, inboundID sql.NullInt64) error {
+	_, err := q.db.ExecContext(ctx, setInboundRUDirect, inboundID)
 	return err
 }
 
@@ -194,5 +275,14 @@ type SetNodeRelayRouteParams struct {
 
 func (q *Queries) SetNodeRelayRoute(ctx context.Context, arg SetNodeRelayRouteParams) error {
 	_, err := q.db.ExecContext(ctx, setNodeRelayRoute, arg.Outbound, arg.ExitNodeID, arg.NodeID)
+	return err
+}
+
+const setRelayRUDirect = `-- name: SetRelayRUDirect :exec
+INSERT INTO cascade_ru_direct (relay_node_id) VALUES ($1) ON CONFLICT (relay_node_id) WHERE relay_node_id IS NOT NULL DO NOTHING
+`
+
+func (q *Queries) SetRelayRUDirect(ctx context.Context, relayNodeID sql.NullInt64) error {
+	_, err := q.db.ExecContext(ctx, setRelayRUDirect, relayNodeID)
 	return err
 }
