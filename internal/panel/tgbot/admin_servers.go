@@ -175,17 +175,26 @@ func (b *Bot) srvList(ctx context.Context, adm Admin, chat int64, aw *admWords, 
 	if err != nil {
 		return fail(err)
 	}
-	lines := []string{head("🖥", sw.list), ""}
+	var rowsText []Row
 	var rows [][]tgapi.Button
 	for _, n := range ns {
-		lines = append(lines, nodeDot(n)+" <b>"+html.EscapeString(n.Name)+"</b> · "+html.EscapeString(nodeState(sw, n)))
+		v := nodeState(sw, n)
+		if n.Version != "" && n.Online {
+			v += " · " + n.Version
+			if n.Behind {
+				v += " ⬆"
+			}
+		}
+		rowsText = append(rowsText, Row{Icon: nodeDot(n), Label: n.Name, Value: v})
 		rows = append(rows, []tgapi.Button{{Text: truncate(nodeDot(n)+" "+n.Name, 40), CallbackData: "aS:" + strconv.FormatInt(n.ID, 10)}})
 	}
+	body := block("", rowsText...)
 	if len(ns) == 0 {
-		lines = append(lines, html.EscapeString(aw.noNodes))
+		body = html.EscapeString(aw.noNodes)
 	} else {
-		lines = append(lines, "", html.EscapeString(sw.listHint))
+		body += "\n\n<i>" + html.EscapeString(sw.listHint) + "</i>"
 	}
+	lines := []string{head("🖥", sw.list), "", body}
 	rows = append(rows, []tgapi.Button{{Text: aw.refresh, CallbackData: "an"}}, home)
 	return pre + strings.Join(lines, "\n"), &tgapi.Keyboard{InlineKeyboard: rows}
 }
@@ -202,8 +211,6 @@ func (b *Bot) srvCard(ctx context.Context, adm Admin, chat, id int64, aw *admWor
 
 func (b *Bot) srvCardOf(n AdminNodeInfo, aw *admWords, sw *srvWords, pre string) (string, *tgapi.Keyboard) {
 	ids := strconv.FormatInt(n.ID, 10)
-	lines := []string{head(nodeDot(n.AdminNode), n.Name), ""}
-	add := func(label, value string) { lines = append(lines, kv(label, value)) }
 	state := nodeState(sw, n.AdminNode)
 	if n.Local {
 		state += " · " + sw.local
@@ -211,21 +218,22 @@ func (b *Bot) srvCardOf(n AdminNodeInfo, aw *admWords, sw *srvWords, pre string)
 	if n.Updating {
 		state += " · " + sw.updateRunning
 	}
-	add(sw.status, state)
+	status := []Row{{"", sw.status, state}}
 	if n.Status == "error" && n.Enabled {
 		if n.Error != "" {
-			add(sw.lastError, truncate(n.Error, 120))
+			status = append(status, Row{"⚠️", sw.lastError, truncate(n.Error, 120)})
 		}
 		if n.ErrorSince > 0 {
-			add(sw.since, time.Unix(n.ErrorSince, 0).Format("02.01 15:04"))
+			status = append(status, Row{"🕒", sw.since, time.Unix(n.ErrorSince, 0).Format("02.01 15:04")})
 		}
 	}
 	if n.Host != "" {
-		add(sw.host, n.Host)
+		status = append(status, Row{"🌐", sw.host, n.Host})
 	}
 	if n.Domain != "" {
-		add(sw.domain, n.Domain)
+		status = append(status, Row{"🔗", sw.domain, n.Domain})
 	}
+	parts := []string{head(nodeDot(n.AdminNode), n.Name), block("", status...)}
 	if n.Online {
 		ver := n.Version
 		if n.Behind {
@@ -233,50 +241,59 @@ func (b *Bot) srvCardOf(n AdminNodeInfo, aw *admWords, sw *srvWords, pre string)
 		} else if n.Version != "" {
 			ver += " (" + sw.upToDate + ")"
 		}
-		if ver != "" {
-			add(sw.version, ver)
-		}
-		if n.MemTotal > 0 {
-			add(sw.load, sw.cpu+" "+pct(n.CPU)+" · "+sw.mem+" "+sizeOf(n.MemUsed)+" / "+sizeOf(n.MemTotal))
-		}
-		add(sw.conns, strconv.Itoa(n.Conns))
+		live := []Row{{"🏷", sw.version, ver}}
 		if n.Listeners > 0 {
-			add(sw.listeners, fmt.Sprintf("%d/%d", n.ListenersOK, n.Listeners))
+			live = append(live, Row{"🔌", sw.listeners, fmt.Sprintf("%d/%d", n.ListenersOK, n.Listeners)})
 		}
+		live = append(live, Row{"👥", sw.conns, strconv.Itoa(n.Conns)})
+		blockLive := block("", live...)
+		if n.MemTotal > 0 {
+			blockLive = "<blockquote>" + trimQuote(blockLive) + "\n" +
+				gauge(sw.cpu, int64(n.CPU), 100) + "\n" +
+				gauge(sw.mem, int64(n.MemUsed>>20), int64(n.MemTotal>>20)) + "\n" +
+				html.EscapeString(sizeOf(n.MemUsed)+" / "+sizeOf(n.MemTotal)) + "</blockquote>"
+		}
+		parts = append(parts, blockLive)
 	}
-	add(sw.inbounds, strconv.Itoa(n.Inbounds))
-	add(sw.traffic, sizeOf(uint64(maxInt64(n.Traffic24h, 0))))
 	ch := sw.noChannel
 	if n.ChannelMbps > 0 {
 		ch = strconv.FormatInt(n.ChannelMbps, 10) + " Mbit/s"
 	}
-	add(sw.channel, ch)
 	pub := sw.noPublic
 	if n.PublicName != "" {
 		pub = n.PublicName
 	}
-	add(sw.publicName, pub)
+	parts = append(parts, block("",
+		Row{"🧩", sw.inbounds, strconv.Itoa(n.Inbounds)},
+		Row{"📊", sw.traffic, sizeOf(uint64(maxInt64(n.Traffic24h, 0)))},
+		Row{"⚡", sw.channel, ch},
+		Row{"🏷", sw.publicName, pub}))
 
 	btn := func(text, data string) tgapi.Button {
 		return tgapi.Button{Text: text, CallbackData: "aS:" + ids + data}
 	}
-	toggle := btn(sw.turnOff, ":e")
+	toggle := clr(tgapi.StyleDanger, btn(sw.turnOff, ":e"))
 	if !n.Enabled {
-		toggle = btn(sw.turnOn, ":e")
+		toggle = clr(tgapi.StyleSuccess, btn(sw.turnOn, ":e"))
 	}
 	rows := [][]tgapi.Button{{toggle, btn(sw.check, ":c")}}
 	if !n.Local {
 		row := []tgapi.Button{btn(sw.speed, ":s")}
 		if n.Behind && n.CanUpdate && !n.Updating {
-			row = append(row, btn(sw.update, ":u"))
+			row = append(row, clr(tgapi.StylePrimary, btn(sw.update, ":u")))
 		}
-		rows = append(rows, row, []tgapi.Button{btn(sw.restart, ":r"), btn(sw.remove, ":d")})
+		rows = append(rows, row, []tgapi.Button{clr(tgapi.StyleDanger, btn(sw.restart, ":r")), clr(tgapi.StyleDanger, btn(sw.remove, ":d"))})
 	} else {
 		rows = append(rows, []tgapi.Button{btn(sw.speed, ":s")})
 	}
 	rows = append(rows, []tgapi.Button{btn(sw.rename, ":n"), btn(sw.rePublic, ":p"), btn(sw.reChan, ":m")},
 		[]tgapi.Button{{Text: sw.back, CallbackData: "an"}, {Text: aw.back, CallbackData: "a"}})
-	return pre + strings.Join(lines, "\n"), &tgapi.Keyboard{InlineKeyboard: rows}
+	return pre + join(parts...), &tgapi.Keyboard{InlineKeyboard: rows}
+}
+
+// trimQuote takes the quote tags off a block, to add lines to it.
+func trimQuote(s string) string {
+	return strings.TrimSuffix(strings.TrimPrefix(s, "<blockquote>"), "</blockquote>")
 }
 
 func maxInt64(a, b int64) int64 {

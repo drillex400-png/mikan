@@ -344,3 +344,47 @@ func TestServerDelete(t *testing.T) {
 		t.Errorf("a second removal: %v", err)
 	}
 }
+
+// The list shows a server the way its card does: a node that answers is online, one that does
+// not is not, a node never checked is not claimed to be up, and the panel's own is up.
+func TestServerListMatchesTheCard(t *testing.T) {
+	e, live, _ := serversEnv(t)
+	up := addNode(t, e, live, "up", "0.5.2.1-rc.10")
+	down := addNode(t, e, live, "down", "0.5.2.1-rc.12")
+	hv := live.health[down.ID]
+	hv.OK, hv.Error = false, "timeout"
+	live.health[down.ID] = hv
+	fresh, err := e.st.Q.CreateNode(e.ctx, db.CreateNodeParams{Name: "fresh", Address: "fresh.example:25305", PublicHost: "203.0.113.8", CreatedAt: 1, UpdatedAt: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	list, err := e.local.Admin().Nodes(e.ctx, adminTg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := map[int64]tgbot.AdminNode{}
+	for _, n := range list {
+		seen[n.ID] = n
+	}
+	if n := seen[up.ID]; !n.Online || n.Version != "0.5.2.1-rc.10" || !n.Behind {
+		t.Errorf("a node that answers: %+v", n)
+	}
+	if n := seen[down.ID]; n.Online {
+		t.Errorf("a node that does not answer is online: %+v", n)
+	}
+	if n := seen[fresh.ID]; n.Online {
+		t.Errorf("a node never checked is online: %+v", n)
+	}
+	for _, n := range list {
+		if n.Local && !n.Online {
+			t.Errorf("the panel's own node is down: %+v", n)
+		}
+		card, err := e.local.Admin().Node(e.ctx, adminTg, n.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if card.Online != n.Online {
+			t.Errorf("%s: the list says online=%v, the card %v", n.Name, n.Online, card.Online)
+		}
+	}
+}

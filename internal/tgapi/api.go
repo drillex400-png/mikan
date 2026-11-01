@@ -262,7 +262,17 @@ type Button struct {
 	CallbackData string  `json:"callback_data,omitempty"`
 	URL          string  `json:"url,omitempty"`
 	WebApp       *WebApp `json:"web_app,omitempty"`
+	// Style colours the button: StylePrimary (blue), StyleSuccess (green) or StyleDanger (red).
+	// Empty is the app's own look. A client that does not know the field ignores it.
+	Style string `json:"style,omitempty"`
 }
+
+// The colours Telegram gives an inline button.
+const (
+	StylePrimary = "primary"
+	StyleSuccess = "success"
+	StyleDanger  = "danger"
+)
 
 type WebApp struct {
 	URL string `json:"url"`
@@ -327,11 +337,39 @@ func (c *Client) Send(ctx context.Context, chat int64, text string, kb *Keyboard
 		in["reply_markup"] = kb
 	}
 	err := c.call(ctx, "sendMessage", in, &m)
+	if badButtons(err) && kb != nil {
+		in["reply_markup"] = kb.Unpainted()
+		err = c.call(ctx, "sendMessage", in, &m)
+	}
 	if unparsable(err) {
 		asPlain(in, text)
 		err = c.call(ctx, "sendMessage", in, &m)
 	}
 	return m, err
+}
+
+// badButtons: Telegram refused the keyboard itself (a client or an API that does not take the
+// buttons' colour). The same keyboard goes again without the colours rather than not at all.
+func badButtons(err error) bool {
+	var ae *APIError
+	if !errors.As(err, &ae) || ae.Code != 400 {
+		return false
+	}
+	d := strings.ToLower(ae.Description)
+	return strings.Contains(d, "style") || strings.Contains(d, "button") || strings.Contains(d, "reply markup") || strings.Contains(d, "keyboard")
+}
+
+// Unpainted is the keyboard as it is without the colours of its buttons.
+func (k *Keyboard) Unpainted() *Keyboard {
+	out := &Keyboard{InlineKeyboard: make([][]Button, len(k.InlineKeyboard))}
+	for i, row := range k.InlineKeyboard {
+		out.InlineKeyboard[i] = make([]Button, len(row))
+		for j, b := range row {
+			b.Style = ""
+			out.InlineKeyboard[i][j] = b
+		}
+	}
+	return out
 }
 
 // unparsable: Telegram refused the message's HTML. The admin's texts are made to parse
@@ -399,6 +437,10 @@ func (c *Client) Edit(ctx context.Context, chat, msg int64, text string, kb *Key
 		in["reply_markup"] = kb
 	}
 	err := c.call(ctx, "editMessageText", in, nil)
+	if badButtons(err) && kb != nil {
+		in["reply_markup"] = kb.Unpainted()
+		err = c.call(ctx, "editMessageText", in, nil)
+	}
 	if unparsable(err) {
 		asPlain(in, text)
 		err = c.call(ctx, "editMessageText", in, nil)

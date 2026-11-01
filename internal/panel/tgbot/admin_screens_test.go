@@ -192,6 +192,9 @@ func TestAdminScreensDraw(t *testing.T) {
 				t.Errorf("%s: unescaped %q in\n%s", d, bad, text)
 			}
 		}
+		if ok, why := htmlBalanced(text); !ok {
+			t.Errorf("%s: Telegram would refuse this text (%s):\n%s", d, why, text)
+		}
 		if kb == nil {
 			continue
 		}

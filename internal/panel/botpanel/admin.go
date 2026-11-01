@@ -12,6 +12,7 @@ import (
 	"mikan/internal/panel/audit"
 	"mikan/internal/panel/domain"
 	"mikan/internal/panel/model"
+	"mikan/internal/panel/nodeupdate"
 	"mikan/internal/panel/store/db"
 	"mikan/internal/panel/tgate"
 	"mikan/internal/panel/tgbot"
@@ -215,7 +216,18 @@ func (a admin) Nodes(ctx context.Context, by int64) ([]tgbot.AdminNode, error) {
 		if host == "" {
 			host = n.Domain
 		}
-		out = append(out, tgbot.AdminNode{ID: n.ID, Name: n.Name, Host: host, Enabled: n.Enabled == 1})
+		// The list shows a server the way its card does: the panel's own node is up while the
+		// panel answers, the others as the node manager last found them.
+		item := tgbot.AdminNode{ID: n.ID, Name: n.Name, Host: host, Enabled: n.Enabled == 1, Local: nodeupdate.Local(n)}
+		if item.Local {
+			item.Online = true
+		} else if a.l.Nodes != nil {
+			if hv, ok := a.l.Nodes.Health(n.ID); ok && !hv.CheckedAt.IsZero() && hv.OK {
+				item.Online, item.Version = true, hv.Health.Version
+				item.Behind = a.l.Version != "" && nodeupdate.Behind(a.l.Version, item.Version)
+			}
+		}
+		out = append(out, item)
 	}
 	return out, nil
 }

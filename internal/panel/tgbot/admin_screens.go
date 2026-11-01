@@ -242,16 +242,20 @@ func (b *Bot) adminScreen(ctx context.Context, chat int64, data, notice string) 
 		if err != nil {
 			return fail(err)
 		}
-		t := head("📊", aw.overview) + "\n\n" + strings.Join([]string{
-			pill("👥", aw.statUsers, o.Users),
-			pill("🟢", aw.statActive, o.Active),
-			pill("🟡", aw.statExpiring, o.Expiring),
-			pill("🔴", aw.statExpired, o.Expired),
-			pill("⛔", aw.statDisabled, o.Disabled),
-			"",
-			html.EscapeString("🖥 "+aw.statNodes+": ") + fmt.Sprintf("<b>%d/%d</b>", o.NodesOnline, o.Nodes),
-			pill("💳", aw.statPaid, o.PaidMonth),
-		}, "\n") + overviewExtra(aw, o)
+		clients := block("",
+			Row{"👥", aw.statUsers, strconv.FormatInt(o.Users, 10)},
+			Row{"🟢", aw.statActive, strconv.FormatInt(o.Active, 10)},
+			Row{"🟡", aw.statExpiring, strconv.FormatInt(o.Expiring, 10)},
+			Row{"🔴", aw.statExpired, strconv.FormatInt(o.Expired, 10)},
+			Row{"⛔", aw.statDisabled, strconv.FormatInt(o.Disabled, 10)})
+		// The share of live subscriptions is a gauge under the numbers.
+		if o.Users > 0 {
+			clients = "<blockquote>" + trimQuote(clients) + "\n" + gauge("📈", o.Active, o.Users) + "</blockquote>"
+		}
+		infra := block("",
+			Row{"🖥", aw.statNodes, fmt.Sprintf("%d/%d", o.NodesOnline, o.Nodes)},
+			Row{"💳", aw.statPaid, strconv.FormatInt(o.PaidMonth, 10)})
+		t := join(head("📊", aw.overview), clients, infra, overviewExtra(aw, o))
 		return pre + t, kb([]tgapi.Button{{Text: aw.refresh, CallbackData: "ao"}, {Text: aw.fSoon + " (" + strconv.FormatInt(o.Expiring, 10) + ")", CallbackData: "au:s:0"}}, home)
 	case "au": // au:<page> (all) or au:<filter>:<page>
 		fl, pg := "", arg
@@ -492,7 +496,7 @@ func (b *Bot) adminScreen(ctx context.Context, chat int64, data, notice string) 
 	case "ab": // ab asks for the text; ab:p previews it and asks to confirm
 		if arg == "x" {
 			b.dropDraft(chat)
-			return pre + "<b>" + html.EscapeString(aw.title) + "</b>", b.adminHome(aw)
+			return pre + head("🛡", aw.title), b.adminHome(aw)
 		}
 		if arg != "p" {
 			b.dropDraft(chat)
@@ -563,33 +567,32 @@ func (b *Bot) adminScreen(ctx context.Context, chat int64, data, notice string) 
 		if err != nil {
 			return fail(err)
 		}
-		lines := []string{head("💳", fmt.Sprintf("%s #%d", aw.payCard, p.ID)), "",
-			html.EscapeString(payLabel(aw, p.Status)),
-			kv(aw.payKind, kindWord(aw, p.Kind)),
-			kv(aw.payAmount, money(p.Amount, p.Currency)),
-		}
+		deal := []Row{{"", aw.payKind, kindWord(aw, p.Kind)}, {"💵", aw.payAmount, money(p.Amount, p.Currency)}}
 		if p.Tariff != "" {
-			lines = append(lines, kv(aw.payTariff, p.Tariff))
+			deal = append(deal, Row{"🏷", aw.payTariff, p.Tariff})
 		}
 		if p.TermDays > 0 {
-			lines = append(lines, kv(aw.payTerm, fmt.Sprintf("%d", p.TermDays)))
+			deal = append(deal, Row{"📅", aw.payTerm, fmt.Sprintf("%d", p.TermDays)})
 		}
+		trail := []Row{}
 		if p.User != "" {
-			lines = append(lines, kv(aw.payUser, p.User))
+			trail = append(trail, Row{"👤", aw.payUser, p.User})
 		}
-		lines = append(lines, kv(aw.payBy, p.Provider), kv("🕒", p.At.Format("02.01.2006 15:04")))
+		trail = append(trail, Row{"🏦", aw.payBy, p.Provider}, Row{"🕒", "", p.At.Format("02.01.2006 15:04")})
 		if p.PaidAt > 0 {
-			lines = append(lines, kv(aw.payPaidAt, time.Unix(p.PaidAt, 0).Format("02.01.2006 15:04")))
+			trail = append(trail, Row{"✅", aw.payPaidAt, time.Unix(p.PaidAt, 0).Format("02.01.2006 15:04")})
 		}
 		if p.Error != "" {
-			lines = append(lines, kv(aw.payErr, truncate(p.Error, 200)))
+			trail = append(trail, Row{"⚠️", aw.payErr, truncate(p.Error, 200)})
 		}
+		lines := []string{head("💳", fmt.Sprintf("%s #%d", aw.payCard, p.ID)),
+			"<b>" + html.EscapeString(payLabel(aw, p.Status)) + "</b>", block("", deal...), block("", trail...)}
 		var rows [][]tgapi.Button
 		if p.UserID != 0 {
-			rows = append(rows, []tgapi.Button{{Text: aw.payOpenUser, CallbackData: "ak:" + strconv.FormatInt(p.UserID, 10)}})
+			rows = append(rows, []tgapi.Button{clr(tgapi.StylePrimary, tgapi.Button{Text: aw.payOpenUser, CallbackData: "ak:" + strconv.FormatInt(p.UserID, 10)})})
 		}
 		rows = append(rows, []tgapi.Button{{Text: aw.back, CallbackData: "ap:" + parts[1] + ":" + parts[2]}})
-		return pre + strings.Join(lines, "\n"), kb(rows...)
+		return pre + join(lines...), kb(rows...)
 	}
 	// "a": the admin's first screen
 	return pre + "<b>" + html.EscapeString(aw.title) + "</b>", b.adminHome(aw)
@@ -645,14 +648,14 @@ func limitWord(aw *admWords, n int64) string {
 // adminHome is the keyboard of the admin's first screen.
 func (b *Bot) adminHome(aw *admWords) *tgapi.Keyboard {
 	return &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{
-		{{Text: aw.overview, CallbackData: "ao"}, {Text: aw.users, CallbackData: "au:0"}},
+		{clr(tgapi.StylePrimary, tgapi.Button{Text: aw.overview, CallbackData: "ao"}), {Text: aw.users, CallbackData: "au:0"}},
 		{{Text: aw.nodes, CallbackData: "an"}, {Text: aw.payments, CallbackData: "ap::0"}},
 		{{Text: aw.broadcast, CallbackData: "ab"}},
 	}}
 }
 
 func confirm(aw *admWords, yes, no string) *tgapi.Keyboard {
-	return &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{{{Text: aw.confirm, CallbackData: yes}, {Text: aw.cancel, CallbackData: no}}}}
+	return &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{{clr(tgapi.StyleSuccess, tgapi.Button{Text: aw.confirm, CallbackData: yes}), clr(tgapi.StyleDanger, tgapi.Button{Text: aw.cancel, CallbackData: no})}}}
 }
 
 func (b *Bot) adminCard(ctx context.Context, adm Admin, chat, id int64, aw *admWords, pre string, fail func(error) (string, *tgapi.Keyboard)) (string, *tgapi.Keyboard) {
@@ -682,38 +685,41 @@ func (b *Bot) adminCard(ctx context.Context, adm Admin, chat, id int64, aw *admW
 	if u.Limit > 0 {
 		lim = gib(u.Limit)
 	}
-	// The card names the subscription and what it has; it carries no link or token.
-	lines := []string{
-		head("👤", u.Name), "",
-		html.EscapeString(stateLabel(aw, u.State)), "",
-		kv(aw.until, until),
-		kv(aw.cardTariff, tariff),
-		html.EscapeString(aw.traffic+": ") + "<b>" + html.EscapeString(gib(u.Used)+" / "+lim) + "</b>",
-		"<code>" + bar(u.Used, u.Limit) + "</code>",
-		kv(aw.devices, devices),
-		kv(aw.tg, tg),
-	}
+	// The card names the subscription and what it has; it carries no link or token. What belongs
+	// together sits in one quote block: the term and the plan, the traffic with its gauge, the
+	// devices and the contacts.
+	term := []Row{{"📅", aw.until, until}, {"🏷", aw.cardTariff, tariff}}
+	traffic := html.EscapeString("📶 "+aw.traffic+": ") + "<b>" + html.EscapeString(gib(u.Used)+" / "+lim) + "</b>\n" +
+		"<code>" + bar(u.Used, u.Limit) + "</code>"
+	who := []Row{{"📱", aw.devices, devices}, {"✈️", aw.tg, tg}}
 	if u.CreatedAt > 0 {
-		lines = append(lines, kv(aw.cardSince, time.Unix(u.CreatedAt, 0).Format("02.01.2006")))
+		who = append(who, Row{"🗓", aw.cardSince, time.Unix(u.CreatedAt, 0).Format("02.01.2006")})
 	}
 	if u.Contact != "" {
-		lines = append(lines, kv("✉️", u.Contact))
+		who = append(who, Row{"✉️", "", u.Contact})
+	}
+	parts := []string{
+		head("👤", u.Name),
+		"<b>" + html.EscapeString(stateLabel(aw, u.State)) + "</b>",
+		block("", term...),
+		"<blockquote>" + traffic + "</blockquote>",
+		block("", who...),
 	}
 	if u.Note != "" {
-		lines = append(lines, "", html.EscapeString("📝 "+aw.cardNote+": ")+html.EscapeString(truncate(u.Note, 300)))
+		parts = append(parts, "<blockquote>"+html.EscapeString("📝 "+aw.cardNote+": ")+html.EscapeString(truncate(u.Note, 300))+"</blockquote>")
 	}
 	idS := strconv.FormatInt(id, 10)
-	blk := tgapi.Button{Text: aw.block, CallbackData: "ac:" + idS + ":1"}
+	blk := clr(tgapi.StyleDanger, tgapi.Button{Text: aw.block, CallbackData: "ac:" + idS + ":1"})
 	if u.State == "disabled" {
-		blk = tgapi.Button{Text: aw.unblock, CallbackData: "ac:" + idS + ":0"}
+		blk = clr(tgapi.StyleSuccess, tgapi.Button{Text: aw.unblock, CallbackData: "ac:" + idS + ":0"})
 	}
-	return pre + strings.Join(lines, "\n"), &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{
-		{{Text: "+7", CallbackData: "ae:" + idS + ":7"}, {Text: "+30", CallbackData: "ae:" + idS + ":30"}, {Text: "+90", CallbackData: "ae:" + idS + ":90"},
-			{Text: aw.other, CallbackData: "ad:" + idS}},
+	return pre + join(parts...), &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{
+		tint(tgapi.StyleSuccess, tgapi.Button{Text: "+7", CallbackData: "ae:" + idS + ":7"}, tgapi.Button{Text: "+30", CallbackData: "ae:" + idS + ":30"}, tgapi.Button{Text: "+90", CallbackData: "ae:" + idS + ":90"}),
+		{clr(tgapi.StylePrimary, tgapi.Button{Text: aw.other, CallbackData: "ad:" + idS})},
 		{{Text: aw.traffLimit, CallbackData: "ag:" + idS}, {Text: aw.devLimit, CallbackData: "av:" + idS}},
 		{{Text: aw.resetTr, CallbackData: "ar:" + idS}, {Text: aw.reissue, CallbackData: "ai:" + idS}},
 		{{Text: aw.tariffBtn, CallbackData: "at:" + idS}, {Text: aw.noteBtn, CallbackData: "aN:" + idS}},
-		{blk, {Text: aw.delBtn, CallbackData: "ax:" + idS}},
+		{blk, clr(tgapi.StyleDanger, tgapi.Button{Text: aw.delBtn, CallbackData: "ax:" + idS})},
 		{{Text: aw.back, CallbackData: "au:0"}},
 	}}
 }

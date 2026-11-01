@@ -3,6 +3,7 @@ package tgbot
 import (
 	"fmt"
 	"html"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -185,17 +186,17 @@ func userFilterName(aw *admWords, f string) string {
 func overviewExtra(aw *admWords, o AdminOverview) string {
 	var out []string
 	if o.NewToday > 0 {
-		out = append(out, html.EscapeString("🆕 "+aw.ovNew+": ")+fmt.Sprintf("<b>%d</b>", o.NewToday))
+		out = append(out, block("", Row{"🆕", aw.ovNew, strconv.FormatInt(o.NewToday, 10)}))
 	}
 	if len(o.Revenue) > 0 {
-		out = append(out, "", "<b>"+html.EscapeString("💰 "+aw.ovRevenue)+"</b>")
+		var rows []Row
 		for _, m := range o.Revenue {
-			out = append(out, html.EscapeString(fmt.Sprintf("%s: %s · %s: %s · %s: %s",
-				aw.ovToday2, money(m.Today, m.Currency), aw.ovWeek, money(m.Week, m.Currency), aw.ovMonth, money(m.Month, m.Currency))))
+			rows = append(rows,
+				Row{"▫️", aw.ovToday2, money(m.Today, m.Currency)},
+				Row{"▫️", aw.ovWeek, money(m.Week, m.Currency)},
+				Row{"▫️", aw.ovMonth, money(m.Month, m.Currency)})
 		}
+		out = append(out, block("💰 "+aw.ovRevenue, rows...))
 	}
-	if len(out) == 0 {
-		return ""
-	}
-	return "\n" + strings.Join(out, "\n")
+	return join(out...)
 }
