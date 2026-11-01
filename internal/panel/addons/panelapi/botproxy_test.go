@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -362,6 +363,79 @@ func TestBotRPCRules(t *testing.T) {
 	s.talk.mark(777)
 	if code, _ := call("User", "["+uid+"]"); code != 200 {
 		t.Fatalf("the owner wrote: %d", code)
+	}
+}
+
+// The admin's calls name the acting account first. The addon cannot act in the name of an
+// account that has not written to the bot, and a change needs users:write, not only a read.
+func TestBotRPCAdminCalls(t *testing.T) {
+	base, _ := proxyWorld(t)
+	ctx := context.Background()
+	d := base.d
+	d.Bot = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, `{"results":[]}`)
+	})
+	s := New(d)
+	if err := settings.Set(ctx, d.Settings, SlotKey, "telegram"); err != nil {
+		t.Fatal(err)
+	}
+	grant := func(perms string) {
+		if err := d.Store.Q.UpsertAddonGrant(ctx, db.UpsertAddonGrantParams{AddonID: "telegram", Version: "1", Permissions: perms, ApprovedAt: 1}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	call := func(method, args string) (int, string) {
+		r := httptest.NewRequest(http.MethodPost, "http://127.0.0.1:41990/panel/v2/bot/"+method, strings.NewReader(args))
+		r.Header.Set("Authorization", "Bearer "+botToken)
+		w := httptest.NewRecorder()
+		s.ServeHTTP(w, r)
+		var e Error
+		_ = json.Unmarshal(w.Body.Bytes(), &e)
+		return w.Code, e.Code
+	}
+	reads := []struct{ method, args string }{
+		{"Admin.Overview", `[900]`}, {"Admin.Users", `[900,"",0]`}, {"Admin.User", `[900,1]`},
+		{"Admin.Nodes", `[900]`}, {"Admin.Payments", `[900]`},
+	}
+	writes := []struct{ method, args string }{
+		{"Admin.GrantDays", `[900,1,30]`}, {"Admin.SetDisabled", `[900,1,true]`},
+	}
+	// The holder of the bot with no users permission reads nothing of the admin's.
+	grant(`["bot"]`)
+	for _, c := range append(slices.Clone(reads), writes...) {
+		if code, ec := call(c.method, c.args); code != 403 || ec != "forbidden" {
+			t.Fatalf("%s without users:read: %d %s", c.method, code, ec)
+		}
+	}
+	// With the permissions, an account that never wrote is refused: the addon cannot say "the
+	// admin did it" for an account that is silent.
+	grant(`["bot","users:read","users:write"]`)
+	for _, c := range append(slices.Clone(reads), writes...) {
+		if code, ec := call(c.method, c.args); code != 403 || ec != "not_talking" {
+			t.Fatalf("%s for a silent account: %d %s", c.method, code, ec)
+		}
+	}
+	// Once it wrote, the call goes through to the panel (which checks the admin list itself).
+	s.talk.markUpdate([]byte(`{"update_id":1,"message":{"from":{"id":900},"chat":{"id":900}}}`))
+	for _, c := range append(slices.Clone(reads), writes...) {
+		if code, _ := call(c.method, c.args); code != 200 {
+			t.Fatalf("%s for an account that wrote: %d", c.method, code)
+		}
+	}
+	// A change needs users:write on top of the read.
+	grant(`["bot","users:read"]`)
+	for _, c := range writes {
+		if code, ec := call(c.method, c.args); code != 403 || ec != "forbidden" {
+			t.Fatalf("%s with users:read only: %d %s", c.method, code, ec)
+		}
+	}
+	if code, _ := call("Admin.Overview", `[900]`); code != 200 {
+		t.Fatalf("a read with users:read: %d", code)
+	}
+	// No such admin method.
+	grant(`["bot","users:read","users:write"]`)
+	if code, _ := call("Admin.Everything", `[900]`); code != 403 {
+		t.Fatalf("an admin method that does not exist: %d", code)
 	}
 }
 

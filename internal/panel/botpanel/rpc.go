@@ -22,6 +22,7 @@ import (
 var (
 	backendType = reflect.TypeFor[tgbot.Backend]()
 	shopType    = reflect.TypeFor[tgbot.Shop]()
+	adminType   = reflect.TypeFor[tgbot.Admin]()
 	errorType   = reflect.TypeFor[error]()
 	contextType = reflect.TypeFor[context.Context]()
 )
@@ -37,6 +38,13 @@ func RPCHandler(b tgbot.Backend) http.Handler {
 		case strings.HasPrefix(name, "Shop."):
 			if m, ok := shopType.MethodByName(strings.TrimPrefix(name, "Shop.")); ok {
 				fn = reflect.ValueOf(b.Shop()).MethodByName(m.Name)
+			}
+		case strings.HasPrefix(name, "Admin."):
+			// Only a backend that has the admin's side serves it: the others answer no_method.
+			if ab, ok := b.(interface{ Admin() tgbot.Admin }); ok {
+				if m, ok := adminType.MethodByName(strings.TrimPrefix(name, "Admin.")); ok {
+					fn = reflect.ValueOf(ab.Admin()).MethodByName(m.Name)
+				}
 			}
 		case name != "Shop":
 			if m, ok := backendType.MethodByName(name); ok {

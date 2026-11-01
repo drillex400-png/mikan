@@ -84,6 +84,18 @@ var botRPC = map[string]rpcRule{
 	"Shop.SetTopupAmount": rule("billing:invoice", []int{0}, nil),
 	"Shop.CancelTopup":    rule("billing:invoice", []int{0}, nil),
 	"Shop.SubmitTopup":    rule("billing:invoice", []int{0}, nil),
+	// The admin's screens (/admin). Argument 0 is the Telegram account that acts: it must have
+	// written to the bot lately, so the addon cannot act in the name of an account that is
+	// silent. That the account is one of the bot's admins the panel checks again on every call
+	// (botpanel admin.check). Reads and changes alike need the bot's holder, and a change needs
+	// users:write on top.
+	"Admin.Overview":    rule("users:read", []int{0}, nil),
+	"Admin.Users":       rule("users:read", []int{0}, nil),
+	"Admin.User":        rule("users:read", []int{0}, nil),
+	"Admin.Nodes":       rule("users:read", []int{0}, nil),
+	"Admin.Payments":    rule("users:read", []int{0}, nil),
+	"Admin.GrantDays":   rule("users:write", []int{0}, nil),
+	"Admin.SetDisabled": rule("users:write", []int{0}, nil),
 }
 
 // talkWindow: how long an account counts as talking to the bot after its last message.

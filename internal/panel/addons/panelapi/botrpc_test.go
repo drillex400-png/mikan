@@ -57,9 +57,23 @@ func TestBotRPCRulesFitTheMethods(t *testing.T) {
 	for i := range shop.NumMethod() {
 		check("Shop."+shop.Method(i).Name, shop.Method(i).Type)
 	}
+	admin := reflect.TypeFor[tgbot.Admin]()
+	for i := range admin.NumMethod() {
+		m := admin.Method(i)
+		check("Admin."+m.Name, m.Type)
+		// Every admin call names the acting account first, and the guard must ask that it is
+		// talking: a method added without it would be open to any account the addon invents.
+		rl := botRPC["Admin."+m.Name]
+		if len(rl.tg) != 1 || rl.tg[0] != 0 {
+			t.Errorf("Admin.%s: the rule does not make argument 0 (the acting account) a talking one: %+v", m.Name, rl)
+		}
+		if rl.perm == "" {
+			t.Errorf("Admin.%s: the rule asks for no permission", m.Name)
+		}
+	}
 	for name := range botRPC {
 		if !known[name] {
-			t.Errorf("botRPC has a rule for %s, which is no method of Backend or Shop", name)
+			t.Errorf("botRPC has a rule for %s, which is no method of Backend, Shop or Admin", name)
 		}
 	}
 }
