@@ -128,7 +128,7 @@ func TestRUDirectNeedsExit(t *testing.T) {
 }
 
 // The databases are asked for only when the state wants the mode; when they cannot be had
-// the mode is left out of the state and the inbound goes whole to its exit.
+// the mode stays (the node keeps the Russian zones on itself) and the inbound keeps its exit.
 func TestGeodataGate(t *testing.T) {
 	a, _, in, st, _ := cascadeToB(t)
 	ctx := context.Background()
@@ -153,12 +153,12 @@ func TestGeodataGate(t *testing.T) {
 		t.Fatalf("ensured %v, state %+v", g.ensured, ds.Exits)
 	}
 
-	// On, the source fails: the mode is dropped, the inbound still goes to the exit.
+	// On, the source fails: the mode stays, the inbound still goes to the exit.
 	g.err = errors.New("no database")
 	ds, _ = a.desired(ctx)
 	a.geodata(ctx, &ds)
-	if len(ds.Exits[0].RUDirect) != 0 {
-		t.Fatalf("the mode stayed without databases: %v", ds.Exits[0].RUDirect)
+	if !slices.Equal(ds.Exits[0].RUDirect, []string{in.Name}) {
+		t.Fatalf("the mode was dropped without databases: %v", ds.Exits[0].RUDirect)
 	}
 	if !slices.Contains(ds.Exits[0].Inbounds, in.Name) {
 		t.Fatal("the inbound lost its exit with the mode")
@@ -168,13 +168,13 @@ func TestGeodataGate(t *testing.T) {
 	a.m.SetGeo(nil)
 	ds, _ = a.desired(ctx)
 	a.geodata(ctx, &ds)
-	if len(ds.Exits[0].RUDirect) != 0 {
-		t.Fatal("the mode stayed with no source")
+	if !slices.Equal(ds.Exits[0].RUDirect, []string{in.Name}) {
+		t.Fatal("the mode was dropped with no source")
 	}
 }
 
-// What reaches the node: without the mode while the databases fail, with it once they are
-// there. The node is never given rules it cannot read.
+// What reaches the node: the mode, whether the databases are there or not. The node itself
+// leaves out the rules it cannot read (see exitRules).
 func TestApplyWithoutGeodata(t *testing.T) {
 	a, an, in, st, _ := cascadeToB(t)
 	ctx := context.Background()
@@ -188,10 +188,8 @@ func TestApplyWithoutGeodata(t *testing.T) {
 	if len(an.applied) == 0 {
 		t.Fatal("nothing applied")
 	}
-	for _, e := range an.applied[len(an.applied)-1].Exits {
-		if len(e.RUDirect) != 0 {
-			t.Fatalf("the node was given the mode without databases: %+v", e)
-		}
+	if first := an.applied[len(an.applied)-1]; len(first.Exits) != 1 || !slices.Equal(first.Exits[0].RUDirect, []string{in.Name}) {
+		t.Fatalf("the mode did not reach the node without databases: %+v", first.Exits)
 	}
 
 	g.err = nil
@@ -199,6 +197,49 @@ func TestApplyWithoutGeodata(t *testing.T) {
 	last := an.applied[len(an.applied)-1]
 	if len(last.Exits) != 1 || !slices.Equal(last.Exits[0].RUDirect, []string{in.Name}) {
 		t.Fatalf("the mode did not reach the node once the databases were there: %+v", last.Exits)
+	}
+}
+
+// The mode turns itself on when an inbound or a relay is given an exit, and keeping the
+// same exit leaves the admin's choice alone.
+func TestAutoRUDirect(t *testing.T) {
+	_, _, in, st, b := cascadeToB(t)
+	ctx := context.Background()
+	q := st.Q
+	on := func() bool {
+		ids, err := q.ListRUDirectInbounds(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return slices.Contains(ids, ptr(in.ID))
+	}
+
+	if err := domain.AutoRUDirect(ctx, q, in.ID, sql.NullInt64{}, sql.NullInt64{}); err != nil || on() {
+		t.Fatalf("on without an exit: err=%v", err)
+	}
+	if err := domain.AutoRUDirect(ctx, q, in.ID, sql.NullInt64{}, ptr(b)); err != nil || !on() {
+		t.Fatalf("off after an exit was added: err=%v", err)
+	}
+	if err := q.ClearInboundRUDirect(ctx, ptr(in.ID)); err != nil {
+		t.Fatal(err)
+	}
+	if err := domain.AutoRUDirect(ctx, q, in.ID, ptr(b), ptr(b)); err != nil || on() {
+		t.Fatalf("the same exit overrode the admin: err=%v", err)
+	}
+	if err := domain.AutoRUDirect(ctx, q, in.ID, ptr(b+1000), ptr(b)); err != nil || !on() {
+		t.Fatalf("off after the exit changed: err=%v", err)
+	}
+
+	relayOn := func(id int64) bool {
+		ids, err := q.ListRUDirectRelays(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return slices.Contains(ids, ptr(id))
+	}
+	// The relay lives on b (cascadeToB made it); a's node is a stand-in for its next hop.
+	if err := domain.AutoRelayRUDirect(ctx, q, b, sql.NullInt64{}, ptr(in.NodeID)); err != nil || !relayOn(b) {
+		t.Fatalf("relay off after an exit was added: err=%v", err)
 	}
 }
 

@@ -205,7 +205,8 @@ func (h *handlers) patchCascade(ctx context.Context, in *cascadePatchInput) (*ca
 		if err != nil {
 			return err
 		}
-		if _, err := domain.EnsureRelay(ctx, q, n, h.d.Now(), h.hostOf(n.ID)); err != nil {
+		relay, err := domain.EnsureRelay(ctx, q, n, h.d.Now(), h.hostOf(n.ID))
+		if err != nil {
 			return err
 		}
 		outbound, exit := b.Outbound, sql.NullInt64{}
@@ -218,7 +219,10 @@ func (h *handlers) patchCascade(ctx context.Context, in *cascadePatchInput) (*ca
 			}
 			outbound, exit = "direct", sql.NullInt64{Int64: b.ExitNodeID, Valid: true}
 		}
-		return q.SetNodeRelayRoute(ctx, db.SetNodeRelayRouteParams{Outbound: outbound, ExitNodeID: exit, NodeID: in.ID})
+		if err := q.SetNodeRelayRoute(ctx, db.SetNodeRelayRouteParams{Outbound: outbound, ExitNodeID: exit, NodeID: in.ID}); err != nil {
+			return err
+		}
+		return domain.AutoRelayRUDirect(ctx, q, in.ID, relay.ExitNodeID, exit)
 	})
 	if err != nil {
 		return nil, cascadeError(err, "exit_node_id")

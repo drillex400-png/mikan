@@ -367,6 +367,9 @@ func (s *Inbounds) update(ctx context.Context, id int64, p InboundPatch) (prev, 
 			if err := q.SetInboundExit(ctx, db.SetInboundExitParams{ExitNodeID: next.ExitNodeID, Outbound: next.Outbound, ID: id}); err != nil {
 				return err
 			}
+			if err := AutoRUDirect(ctx, q, id, prev.ExitNodeID, next.ExitNodeID); err != nil {
+				return err
+			}
 		}
 		if next.Listen != prev.Listen {
 			if err := q.SetInboundListen(ctx, db.SetInboundListenParams{Listen: next.Listen, ID: id}); err != nil {
@@ -712,6 +715,9 @@ func (s *Inbounds) SetExits(ctx context.Context, ids []int64, outbound string, e
 				p.Outbound, p.ExitNodeID = "direct", sql.NullInt64{Int64: exit, Valid: true}
 			}
 			if err := q.SetInboundExit(ctx, p); err != nil {
+				return err
+			}
+			if err := AutoRUDirect(ctx, q, id, in.ExitNodeID, p.ExitNodeID); err != nil {
 				return err
 			}
 			if in, err = q.GetInbound(ctx, id); err != nil {

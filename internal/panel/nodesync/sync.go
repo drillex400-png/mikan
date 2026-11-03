@@ -279,10 +279,10 @@ func (s *Syncer) desiredPin(ctx context.Context) (st nodeapi.DesiredState, pin s
 }
 
 // geodata makes sure the node holds the databases of the "Russia direct" mode when the state
-// asks for it. When it cannot (no source, the fetch failed, the node refused a file, an
-// older node), the mode is left out of the state: the inbound goes to its exit whole, as it
-// did before the mode, and the reason is logged once per change. A state with the mode off
-// never touches the source.
+// asks for it. When it cannot (no source, the fetch failed, the node refused a file), the
+// mode stays in the state: the node keeps the Russian zones (.ru, .su, .рф) on itself, which
+// need no database, and leaves geosite and geoip out until it has them. The reason is
+// logged once per change. A state with the mode off never touches the source.
 func (s *Syncer) geodata(ctx context.Context, st *nodeapi.DesiredState) {
 	want := false
 	for _, e := range st.Exits {
@@ -308,10 +308,7 @@ func (s *Syncer) geodata(ctx context.Context, st *nodeapi.DesiredState) {
 	s.geoErr = msg
 	s.mu.Unlock()
 	if changed {
-		s.log.Warn("russia-direct is off on this node: no geodata", "err", err)
-	}
-	for i := range st.Exits {
-		st.Exits[i].RUDirect = nil
+		s.log.Warn("russia-direct keeps only the Russian zones on this node: no geodata", "err", err)
 	}
 }
 
