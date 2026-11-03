@@ -5,6 +5,7 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -152,6 +153,9 @@ func TestExitRulesRUDirect(t *testing.T) {
 	st := ruState(t)
 	got := strings.Join(ruRules(st, true), "\n")
 	want := []string{
+		"AND,((IN-NAME,in-anytls),(DOMAIN-SUFFIX,ru)),DIRECT",
+		"AND,((IN-NAME,in-anytls),(DOMAIN-SUFFIX,su)),DIRECT",
+		"AND,((IN-NAME,in-anytls),(DOMAIN-SUFFIX,xn--p1ai)),DIRECT",
 		"AND,((IN-NAME,in-anytls),(GEOSITE,category-ru)),DIRECT",
 		"AND,((IN-NAME,in-anytls),(GEOIP,ru,no-resolve)),DIRECT",
 		"IN-NAME,in-anytls,NODE-3",
@@ -177,18 +181,37 @@ func TestExitRulesRUDirect(t *testing.T) {
 	}
 }
 
-// Without the databases the mode is off: the same rules as before it, whole to the exit.
+// Without the databases the Russian zones still stay on the node, ahead of the exit, and
+// no rule names a database the node does not have; the rest is as with the mode off.
 func TestExitRulesRUDirectNeedsGeodata(t *testing.T) {
 	st := ruState(t)
 	got := ruRules(st, false)
+	var zones, rest []string
 	for _, r := range got {
-		if strings.Contains(r, "GEO") || strings.HasPrefix(r, "AND,") {
+		if strings.Contains(r, "GEO") {
 			t.Fatalf("a rule names a database the node does not have: %s", r)
 		}
+		if strings.HasPrefix(r, "AND,((IN-NAME,in-anytls),(DOMAIN-SUFFIX,") {
+			zones = append(zones, r)
+			continue
+		}
+		rest = append(rest, r)
+	}
+	want := []string{
+		"AND,((IN-NAME,in-anytls),(DOMAIN-SUFFIX,ru)),DIRECT",
+		"AND,((IN-NAME,in-anytls),(DOMAIN-SUFFIX,su)),DIRECT",
+		"AND,((IN-NAME,in-anytls),(DOMAIN-SUFFIX,xn--p1ai)),DIRECT",
+	}
+	if strings.Join(zones, "|") != strings.Join(want, "|") {
+		t.Fatalf("zones = %v, want %v", zones, want)
+	}
+	exit := slices.Index(got, "IN-NAME,in-anytls,NODE-3")
+	if exit < 0 || slices.Index(got, want[len(want)-1]) > exit {
+		t.Fatalf("the zones do not come before the exit:\n%s", strings.Join(got, "\n"))
 	}
 	plain := cascadeState(t)
-	if strings.Join(got, "|") != strings.Join(exitRules(plain, true), "|") {
-		t.Fatal("the mode off changed the rules")
+	if strings.Join(rest, "|") != strings.Join(exitRules(plain, false), "|") {
+		t.Fatal("the mode changed more than the Russian zones")
 	}
 }
 

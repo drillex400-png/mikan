@@ -51,14 +51,19 @@ func exitProxyConfig(e nodeapi.Exit) (map[string]any, error) {
 	return p, nil
 }
 
+// ruZones are the Russian top-level zones the mode keeps on the node: .ru, .su and .рф
+// (as the core sees it, in punycode).
+var ruZones = []string{"ru", "su", "xn--p1ai"}
+
 // exitRules send the inbounds of each exit to that node. An inbound named by several
 // exits goes to the first.
 //
-// With geo (the node holds readable geodata, see Geo) an inbound of RUDirect first lets the
-// Russian sites and addresses out of the node itself: the rules for it come before the one
-// that sends it on, so the first match wins and the rest of its traffic goes to the exit.
-// Without geo the inbound goes to the exit whole, as it did before the mode: a rule that
-// names a database the node does not have would not load, and nothing else would apply.
+// An inbound of RUDirect first lets the Russian sites out of the node itself: the rules for
+// it come before the one that sends it on, so the first match wins and the rest of its
+// traffic goes to the exit. The Russian zones (ruZones) need no database and always apply;
+// with geo (the node holds readable geodata, see Geo) geosite and geoip add the Russian
+// sites outside those zones and the Russian addresses. Without geo only the zones apply: a
+// rule that names a database the node does not have would not load, and nothing else would.
 func exitRules(st nodeapi.DesiredState, geo bool) []string {
 	present := listenerNames(st)
 	taken := map[string]bool{}
@@ -76,6 +81,11 @@ func exitRules(st nodeapi.DesiredState, geo bool) []string {
 				continue
 			}
 			taken[name] = true
+			if local[name] {
+				for _, z := range ruZones {
+					r = append(r, "AND,((IN-NAME,"+name+"),(DOMAIN-SUFFIX,"+z+")),DIRECT")
+				}
+			}
 			if geo && local[name] {
 				// no-resolve: the destination is judged by the address the client gave; a name
 				// is judged by geosite, and the rest of the traffic goes on by name to the exit

@@ -150,6 +150,25 @@ func UseExit(ctx context.Context, q *db.Queries, src, exit int64, now time.Time,
 	return err
 }
 
+// AutoRUDirect turns the "Russia direct" mode on for an inbound that has just been given
+// an exit (none before, or another node): its Russian sites leave its own node and the rest
+// goes on. Keeping the same exit leaves the mode as the admin set it.
+func AutoRUDirect(ctx context.Context, q *db.Queries, inbound int64, prev, next sql.NullInt64) error {
+	if !next.Valid || prev.Valid && prev.Int64 == next.Int64 {
+		return nil
+	}
+	return q.SetInboundRUDirect(ctx, sql.NullInt64{Int64: inbound, Valid: true})
+}
+
+// AutoRelayRUDirect is AutoRUDirect for the relay of node: traffic of other nodes that goes
+// on through it.
+func AutoRelayRUDirect(ctx context.Context, q *db.Queries, node int64, prev, next sql.NullInt64) error {
+	if !next.Valid || prev.Valid && prev.Int64 == next.Int64 {
+		return nil
+	}
+	return q.SetRelayRUDirect(ctx, sql.NullInt64{Int64: node, Valid: true})
+}
+
 // ExitUse is what leaves the internet through a node: inbounds of other nodes, enabled
 // or not, and nodes whose relay goes on through it. Deleting the node would quietly send
 // their traffic straight out.
