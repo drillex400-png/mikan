@@ -29,6 +29,9 @@ type fakeAdmin struct {
 	// nodeErr is what the server actions answer with; node is the server's card.
 	nodeErr error
 	node    AdminNodeInfo
+	// created and price are what the shop's changes were asked with.
+	created []AdminPromoInput
+	price   int64
 }
 
 func (f *fakeAdmin) rec(s string) { f.calls = append(f.calls, s) }
@@ -219,7 +222,7 @@ func TestAdminScreensDraw(t *testing.T) {
 // pressKnown says whether the bot answers a callback code as the admin's.
 func (b *Bot) pressKnown(cmd string) (string, bool) {
 	switch cmd {
-	case "a", "ao", "au", "an", "ap", "aP", "ac", "ae", "ak", "ad", "as", "az", "ab", "ag", "av", "ar", "ai", "ax", "at", "aT", "aN", "aS", "aG":
+	case "a", "ao", "au", "an", "ap", "aP", "ac", "ae", "ak", "ad", "as", "az", "ab", "ag", "av", "ar", "ai", "ax", "at", "aT", "aN", "aS", "aG", "aQ", "aq", "aW", "aF", "aY":
 		return cmd, true
 	}
 	return "", false
