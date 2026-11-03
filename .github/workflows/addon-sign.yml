@@ -1,0 +1,102 @@
+# Signs the source file of the bot addon (mikan-addon.json and its signature, made by
+# `mikan-release addon`) for an image addon-bot.yml pushed, so the holder of the release key
+# needs no copy of it outside this repository's secret. Run by hand from main with the
+# version and the digest from addon-bot's summary; the two files come out as the run's
+# artifact, to be published as a release of the addon source repository (mikan-bot-source).
+#
+# The signing key reaches this job, so only main's code runs it: a run from any other ref
+# stops at the first step, before the key is read. The digest must be the one of the image
+# pushed under that version.
+name: addon-sign
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Bot version, e.g. 0.5.2.4"
+        required: true
+      digest:
+        description: "Digest from addon-bot's summary (sha256:…)"
+        required: true
+      min_panel:
+        description: "The oldest panel that runs it, e.g. 0.5.2.4 (empty: any)"
+        required: false
+        default: ""
+
+permissions: {}
+
+jobs:
+  sign:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: main only
+        run: |
+          if [ "$GITHUB_REF" != refs/heads/main ]; then
+            echo "::error::addon-sign runs from main only, not $GITHUB_REF"
+            exit 1
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.27"
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: the image
+        env:
+          VERSION: ${{ inputs.version }}
+          DIGEST: ${{ inputs.digest }}
+          MIN_PANEL: ${{ inputs.min_panel }}
+        run: |
+          semver='[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?(-[0-9A-Za-z.-]+)?'
+          if ! [[ "$VERSION" =~ ^${semver}$ ]]; then
+            echo "::error::Invalid version: $VERSION"
+            exit 1
+          fi
+          if [ -n "$MIN_PANEL" ] && ! [[ "$MIN_PANEL" =~ ^${semver}$ ]]; then
+            echo "::error::Invalid min_panel: $MIN_PANEL"
+            exit 1
+          fi
+          if ! [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::Invalid digest: $DIGEST"
+            exit 1
+          fi
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/mikan-bot"
+          pushed=$(docker buildx imagetools inspect "$image:$VERSION" --format '{{json .Manifest.Digest}}' | tr -d '"')
+          if [ "$pushed" != "$DIGEST" ]; then
+            echo "::error::$image:$VERSION is $pushed, not $DIGEST"
+            exit 1
+          fi
+          echo "IMAGE=$image" >> "$GITHUB_ENV"
+      - name: sign
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+          VERSION: ${{ inputs.version }}
+          DIGEST: ${{ inputs.digest }}
+          MIN_PANEL: ${{ inputs.min_panel }}
+        run: |
+          go run ./cmd/mikan-release addon -version "$VERSION" -image "$IMAGE" -digest "$DIGEST" \
+            -min-panel "$MIN_PANEL" -homepage "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" -out dist
+          {
+            echo "### mikan-bot $VERSION"
+            echo
+            echo "- image: \`$IMAGE@$DIGEST\`"
+            echo "- min panel: \`${MIN_PANEL:-any}\`"
+            echo
+            echo "Publish \`mikan-addon.json\` and \`mikan-addon.json.sig\` from the artifact as the latest release of the addon source repository."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mikan-addon-${{ inputs.version }}
+          path: |
+            dist/mikan-addon.json
+            dist/mikan-addon.json.sig
+          if-no-files-found: error
