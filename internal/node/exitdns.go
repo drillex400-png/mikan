@@ -19,9 +19,17 @@ import (
 // snifferConfig reads the name out of a connection made to a bare address and dials the
 // name (override-destination): the node resolves it, not the user's device. Only on the
 // ports of SniffPorts, where the client speaks first.
-func snifferConfig(d *nodeapi.ExitDNS) map[string]any {
+//
+// ruSniff is for "Russia direct": its rules go by the site's name, and a client that sends
+// a bare address has none. Then the name is read for the rules only and the connection
+// still goes to the address the client chose (no override-destination).
+func snifferConfig(d *nodeapi.ExitDNS, ruSniff bool) map[string]any {
+	override := true
 	if d == nil || !d.Sniff {
-		return map[string]any{"enable": false}
+		if !ruSniff {
+			return map[string]any{"enable": false}
+		}
+		override = false
 	}
 	ports := func(ps []string) []any {
 		out := make([]any, 0, len(ps))
@@ -33,7 +41,7 @@ func snifferConfig(d *nodeapi.ExitDNS) map[string]any {
 	return map[string]any{
 		"enable":               true,
 		"parse-pure-ip":        true,
-		"override-destination": true,
+		"override-destination": override,
 		"sniff": map[string]any{
 			"TLS":  map[string]any{"ports": ports(nodeapi.SniffPorts.TLS)},
 			"HTTP": map[string]any{"ports": ports(nodeapi.SniffPorts.HTTP)},
@@ -68,11 +76,11 @@ func dnsConfig(d *nodeapi.ExitDNS) map[string]any {
 }
 
 // exitDNSKey covers what applyExitDNS depends on.
-func exitDNSKey(d *nodeapi.ExitDNS) string {
+func exitDNSKey(d *nodeapi.ExitDNS, ruSniff bool) string {
 	raw, _ := json.Marshal(struct {
 		S map[string]any
 		D map[string]any
-	}{snifferConfig(d), dnsConfig(d)})
+	}{snifferConfig(d, ruSniff), dnsConfig(d)})
 	return string(raw)
 }
 

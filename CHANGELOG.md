@@ -3,6 +3,17 @@
 Each release has a section in English and in Russian; the release workflow puts them in
 the signed manifest, and the panel shows the one in its language.
 
+## 0.5.2.3
+### en
+- **"Russia direct" in the protocol editor.** Under "Way out to the internet → Via a node" the switch now shows what goes where: Russian sites from this node, everything else through the exit, and whether the address databases are in.
+- **Clearer cascade page.** The node's relay setting is now named "Transit" and says it is only for other nodes' traffic: the exit for this node's clients is set in the protocol.
+- **Fixed: Russian sites went to the exit for clients that send a bare IP.** With "Russia direct" on the node reads the site's name off the connection for its rules (the destination stays as the client chose it), so .ru, .su and .рф stay on the node for them too. Update the node.
+
+### ru
+- **«Россия напрямую» в редакторе протокола.** Под «Выход в интернет → Через ноду» теперь есть переключатель, и видно, что куда идёт: российские сайты — с этой ноды, остальное — через выход, и скачаны ли базы адресов.
+- **Понятнее страница каскада.** Настройка relay ноды теперь называется «Транзит» и прямо говорит, что она только для трафика других нод: выход для клиентов этой ноды задаётся в протоколе.
+- **Исправлено: российские сайты уходили на выход у клиентов, которые присылают голый IP.** С включённым «Россия напрямую» нода узнаёт имя сайта из соединения для своих правил (адрес назначения остаётся тем, что выбрал клиент), поэтому .ru, .su и .рф остаются на ноде и у них. Ноду нужно обновить.
+
 ## 0.5.2.2
 ### en
 - **Cascade: "Russia direct" turns itself on** when an inbound or a node's relay is given an exit through another node (or the exit changes). Keeping the same exit leaves the switch as the admin set it, and it can still be turned off.

@@ -266,3 +266,111 @@ func TestRUDirectConfigParses(t *testing.T) {
 		t.Fatalf("%d Russian exceptions reached the core's rules, want the site's and the address's", sawRU)
 	}
 }
+
+// routeOf is where the core sends a connection with md: its rules in order, as the tunnel
+// matches them, the first that matches wins.
+func routeOf(t *testing.T, rules []C.Rule, md *C.Metadata) string {
+	t.Helper()
+	h := C.RuleMatchHelper{ResolveIP: func() {}, FindProcess: func() {}}
+	for _, r := range rules {
+		if ok, a := r.Match(md, h); ok {
+			return a
+		}
+	}
+	return "MATCH"
+}
+
+// Where the connections of an inbound in "Russia direct" really go, by the core's own rule
+// matching: the Russian zones and addresses leave from this node, everything else goes to
+// the exit, and an inbound without the mode goes to the exit whole. Without the databases
+// the zones still stay; a bare Russian address then goes on (no database to know it by).
+func TestRUDirectRoutes(t *testing.T) {
+	const exit = "NODE-3"
+	host := func(in, h string) *C.Metadata {
+		return &C.Metadata{NetWork: C.TCP, InName: in, Host: h, DstPort: 443}
+	}
+	addr := func(in, ip string) *C.Metadata {
+		return &C.Metadata{NetWork: C.TCP, InName: in, DstIP: netip.MustParseAddr(ip), DstPort: 443}
+	}
+	sniffed := func(in, ip, name string) *C.Metadata {
+		md := addr(in, ip)
+		md.SniffHost = name
+		return md
+	}
+	type tc struct {
+		name string
+		md   *C.Metadata
+		want string
+	}
+	check := func(t *testing.T, geo bool, cases []tc) {
+		t.Helper()
+		e := geoEngine(t)
+		if geo {
+			if err := e.PutGeodata(GeoIP, testGeoIP(t, "ru")); err != nil {
+				t.Fatal(err)
+			}
+			if err := e.PutGeodata(GeoSite, testGeoSite(t, "category-ru")); err != nil {
+				t.Fatal(err)
+			}
+		}
+		C.SetHomeDir(e.home)
+		raw, _, err := buildConfig(ruState(t), mproto.Cert{CertPath: "/tmp/c.pem", KeyPath: "/tmp/k.pem"}, false, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		cfg, err := executor.ParseWithBytes(raw)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, c := range cases {
+			if got := routeOf(t, cfg.Rules, c.md); got != c.want {
+				t.Errorf("geodata %v, %s: goes to %s, want %s", geo, c.name, got, c.want)
+			}
+		}
+	}
+	t.Run("with geodata", func(t *testing.T) {
+		check(t, true, []tc{
+			{"a .ru site", host("in-anytls", "www.gosuslugi.ru"), "DIRECT"},
+			{"a .su site", host("in-anytls", "mail.su"), "DIRECT"},
+			{"a .рф site", host("in-anytls", "xn--90adear.xn--p1ai"), "DIRECT"},
+			{"a Russian site in geosite", host("in-anytls", "yandex.ru"), "DIRECT"},
+			{"a foreign site", host("in-anytls", "www.google.com"), exit},
+			{"a Russian address", addr("in-anytls", "77.88.8.8"), "DIRECT"},
+			{"a foreign address", addr("in-anytls", "8.8.8.8"), exit},
+			{"a .ru name read off a bare address", sniffed("in-anytls", "8.8.8.8", "vk.ru"), "DIRECT"},
+			{"a .ru site, inbound without the mode", host(nodeapi.RelayListener, "www.gosuslugi.ru"), exit},
+			{"the node's own network", addr("in-anytls", "10.0.0.1"), "REJECT"},
+		})
+	})
+	t.Run("without geodata", func(t *testing.T) {
+		check(t, false, []tc{
+			{"a .ru site", host("in-anytls", "www.gosuslugi.ru"), "DIRECT"},
+			{"a .рф site", host("in-anytls", "xn--90adear.xn--p1ai"), "DIRECT"},
+			{"a foreign site", host("in-anytls", "www.google.com"), exit},
+			{"a .ru name read off a bare address", sniffed("in-anytls", "8.8.8.8", "vk.ru"), "DIRECT"},
+			{"a bare Russian address", addr("in-anytls", "77.88.8.8"), exit},
+		})
+	})
+}
+
+// With "Russia direct" on the node reads the site's name off a bare address for the rules,
+// and leaves the connection's destination as the client chose it; without the mode and
+// without the exit DNS the sniffer stays off.
+func TestRUDirectSniffer(t *testing.T) {
+	if s := snifferConfig(nil, false); s["enable"] != false {
+		t.Fatalf("sniffer %v without the mode", s)
+	}
+	s := snifferConfig(nil, true)
+	if s["enable"] != true || s["parse-pure-ip"] != true || s["override-destination"] != false {
+		t.Fatalf("sniffer %v for the mode", s)
+	}
+	if s := snifferConfig(&nodeapi.ExitDNS{Sniff: true}, true); s["override-destination"] != true {
+		t.Fatalf("the exit DNS's sniffer %v lost its override", s)
+	}
+	if exitDNSKey(nil, false) == exitDNSKey(nil, true) {
+		t.Fatal("turning the mode on does not reapply the sniffer")
+	}
+	if !ruDirectOn(ruState(t)) || ruDirectOn(cascadeState(t)) {
+		t.Fatal("ruDirectOn")
+	}
+}

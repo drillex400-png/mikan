@@ -1384,7 +1384,7 @@
     "outboundWarpHint": "All traffic goes through the node's WARP, sites see a Cloudflare address. If WARP is down the protocol stops working: traffic does not go direct.",
     "outboundNoWarp": "The node has no WARP or it is off, so traffic goes direct for now. Set WARP up on the Nodes page.",
     "outboundNode": "Via a node",
-    "outboundNodeHint": "Clients connect to this node and leave to the internet through the chosen one: sites see its address. If that node is down, traffic does not go direct.",
+    "outboundNodeHint": "Clients connect to this node and leave to the internet through the chosen one: sites see its address. If that node is down, traffic does not go direct. This is the cascade setting for this node's clients.",
     "exitNode": "Exit node",
     "exitPick": "Pick a node",
     "obfs": "Obfuscation",
@@ -1445,7 +1445,13 @@
       "routerOff": "The node's SNI router is off: the protocol stays on its own port until it is on."
     },
     "nestedTLS": "TLS in TLS",
-    "nestedTLSNote": "The TLS of the sites a client opens goes inside this protocol's own TLS (TLS in TLS): DPI can tell a proxy by the sizes of the first packets. Keep a protocol with Vision or AnyTLS next to it: they have no such pattern."
+    "nestedTLSNote": "The TLS of the sites a client opens goes inside this protocol's own TLS (TLS in TLS): DPI can tell a proxy by the sizes of the first packets. Keep a protocol with Vision or AnyTLS next to it: they have no such pattern.",
+    "ruDirect": {
+      "onSave": "Saving turns “Russia direct” on: sites in .ru, .su, .рф and the other Russian addresses from the databases open from this node, everything else through {exit}.",
+      "on": "Russian sites (.ru, .su, .рф and addresses from the databases) from this node, everything else through {exit}.",
+      "off": "Off: all traffic, Russian sites included, goes through {exit}.",
+      "zonesOnly": "The Russian address databases are not downloaded yet: for now only .ru, .su and .рф go direct."
+    }
   },
   "settings": {
     "subtitle": "Server address, subscription look and sign-in security",
@@ -3099,13 +3105,13 @@
   "cascade": {
     "ruDirect": {
       "title": "Russia direct",
-      "intro": "Traffic to Russian sites and addresses leaves from this node; only the rest goes on to the far exit. Russian services see a Russian IP and stay fast.",
+      "intro": "Traffic to Russian sites (.ru, .su, .рф and addresses from the databases) leaves from this node, and only the rest goes to the far exit. Russian services see a Russian IP and stay fast.",
       "inbound": "Inbound “{name}”",
       "inboundSub": "Russian sites from this node, the rest through {exit}",
       "relay": "Other nodes' traffic through this one",
       "relaySub": "Russian sites from this node, the rest further down the chain",
       "none": "Nothing to turn on: no inbound leaves through another node.",
-      "geoNone": "The Russian address databases are not downloaded yet. The mode starts working once they are.",
+      "geoNone": "The Russian address databases are not downloaded yet: for now only .ru, .su and .рф go direct. Other Russian sites and IPs join once the databases are in.",
       "geoOk": "Russian address databases: updated {when}",
       "geoErr": "The databases did not download: {error}",
       "geoRefresh": "Download now",
@@ -3117,13 +3123,13 @@
     "intro": "A client connects to the near server and leaves to the internet through the far one. Sites see the far one's address.",
     "exits": "This node sends traffic out through",
     "exitsNone": "Nothing yet: everything leaves from here.",
-    "exitsHint": "The exit node is picked in a protocol's settings: “Way out to the internet → Via a node”.",
+    "exitsHint": "The exit for this node's clients is set in each protocol: “Protocols → protocol → Way out to the internet → Via a node”. For several at once, select them in the protocol list.",
     "check": "Check",
     "exitIP": "sites see {ip}",
     "down": "no way out",
     "unknown": "not checked",
     "relayed": "other nodes' traffic",
-    "relay": "Other nodes' traffic through this one",
+    "relay": "Transit: other nodes' traffic through this one",
     "sources": "Leaving through this node: {list}. The relay entry is port {port}/tcp.",
     "sourcesNone": "No node leaves through this one yet. Once one does, the panel opens the relay itself.",
     "listener": {
@@ -3133,13 +3139,14 @@
       "busyText": "Another program holds port {port}/tcp, so other nodes cannot leave through this one. With “Move to another port when it is blocked” on, the panel moves the relay to a free port itself.",
       "failedText": "The relay did not start, so other nodes cannot leave through this one."
     },
-    "route": "Where other nodes' traffic goes next",
+    "route": "Where transit traffic goes next",
     "routeHint": {
       "direct": "To the internet from this server.",
       "warp": "Through this node's WARP: WARP must be set up.",
       "node": "Further down the chain, through one more node."
     },
-    "saved": "Cascade saved"
+    "saved": "Cascade saved",
+    "relayIntro": "Only for chains of three nodes or more (another node → this one → further). It does not affect clients connecting to this node: their exit is set in the protocol."
   },
   "pools": {
     "title": "Server groups",

@@ -111,6 +111,7 @@ function Body({ nodeId, c, refetch, checking }: { nodeId: number; c: Cascade; re
 
       <section className="border-t border-[var(--hairline)] pt-4">
         <h3 className="mb-1 text-[13px] font-semibold">{t("cascade.relay")}</h3>
+        <p className="mb-2 text-xs leading-relaxed text-[var(--ink-600)]">{t("cascade.relayIntro")}</p>
         <p className="mb-3 text-xs text-[var(--ink-500)]">
           {c.relay && c.relay.sources.length
             ? t("cascade.sources", { list: c.relay.sources.map((s) => s.name || name(s.node_id)).join(", "), port: c.relay.port })
