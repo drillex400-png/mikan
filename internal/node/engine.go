@@ -243,7 +243,7 @@ func Start(o Options) (*Engine, error) {
 	if err := applyBase(); err != nil {
 		return nil, err
 	}
-	e.exitDNS = exitDNSKey(nil)
+	e.exitDNS = exitDNSKey(nil, false)
 
 	st, ok, err := loadState(filepath.Join(dataDir, stateFile), log)
 	if err != nil {
@@ -383,7 +383,7 @@ func (e *Engine) apply(st nodeapi.DesiredState) (nodeapi.ApplyResult, error) {
 		e.warpMu.Unlock()
 	}
 
-	if key := exitDNSKey(st.DNS); key != e.exitDNS {
+	if key := exitDNSKey(st.DNS, ruDirectOn(st)); key != e.exitDNS {
 		if err := applyExitDNS(cfg); err != nil {
 			e.log.Error("exit dns", "err", err)
 		} else {

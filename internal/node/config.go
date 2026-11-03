@@ -127,7 +127,7 @@ func buildConfig(st nodeapi.DesiredState, cert proto.Cert, allowPrivate bool, fr
 		"find-process-mode": "off",
 		"profile":           map[string]any{"store-selected": false, "store-fake-ip": false},
 		"dns":               dnsConfig(st.DNS),
-		"sniffer":           snifferConfig(st.DNS),
+		"sniffer":           snifferConfig(st.DNS, ruDirectOn(st)),
 		"proxies":           proxies,
 		"rules":             rules(st, allowPrivate),
 		"listeners":         listeners,

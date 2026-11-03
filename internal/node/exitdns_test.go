@@ -106,14 +106,14 @@ func TestSnifferDialsTheName(t *testing.T) {
 }
 
 func TestExitDNSKey(t *testing.T) {
-	if exitDNSKey(nil) != exitDNSKey(&nodeapi.ExitDNS{}) {
+	if exitDNSKey(nil, false) != exitDNSKey(&nodeapi.ExitDNS{}, false) {
 		t.Fatal("off and none differ")
 	}
-	if exitDNSKey(nil) == exitDNSKey(&nodeapi.ExitDNS{Sniff: true}) {
+	if exitDNSKey(nil, false) == exitDNSKey(&nodeapi.ExitDNS{Sniff: true}, false) {
 		t.Fatal("the sniffer does not change the key")
 	}
 	// A server that is left out does not change what mihomo holds.
-	if exitDNSKey(&nodeapi.ExitDNS{Servers: []string{"8.8.8.8"}}) != exitDNSKey(&nodeapi.ExitDNS{Servers: []string{" 8.8.8.8", "junk"}}) {
+	if exitDNSKey(&nodeapi.ExitDNS{Servers: []string{"8.8.8.8"}}, false) != exitDNSKey(&nodeapi.ExitDNS{Servers: []string{" 8.8.8.8", "junk"}}, false) {
 		t.Fatal("the key depends on what is left out")
 	}
 }

@@ -19,6 +19,7 @@ import { nodeLabel } from "../../../lib/node-label";
 import { useWarp } from "../node-warp";
 import { Editor, type ListenAt, ValidateResult, hostPort, listenAt, loopback, preloadEditor, useValidate } from "./shared";
 import { TargetPicker } from "./target";
+import { InboundRUDirect } from "./ru-direct";
 import { CdnSettings, cdnClient, cdnFormOf, type CdnForm } from "./cdn";
 
 /** The inbound form's fields as its inputs hold them. */
@@ -382,6 +383,16 @@ export function EditDrawer({ inbound, onClose }: { inbound: Inbound | null; onCl
                         </option>
                       ))}
                   </select>
+                ) : null}
+                {outbound === "node" && exitNode ? (
+                  <InboundRUDirect
+                    inbound={inbound}
+                    exitNode={exitNode}
+                    exitName={(() => {
+                      const n = allNodes.data?.find((x) => x.id === exitNode);
+                      return n ? nodeLabel(n) : `#${exitNode}`;
+                    })()}
+                  />
                 ) : null}
               </Field>
               {pools.data?.length ? (

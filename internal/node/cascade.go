@@ -55,6 +55,16 @@ func exitProxyConfig(e nodeapi.Exit) (map[string]any, error) {
 // (as the core sees it, in punycode).
 var ruZones = []string{"ru", "su", "xn--p1ai"}
 
+// ruDirectOn says whether some traffic of the node is split by "Russia direct".
+func ruDirectOn(st nodeapi.DesiredState) bool {
+	for _, e := range st.Exits {
+		if len(e.RUDirect) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 // exitRules send the inbounds of each exit to that node. An inbound named by several
 // exits goes to the first.
 //
