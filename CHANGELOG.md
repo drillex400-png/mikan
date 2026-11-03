@@ -3,6 +3,17 @@
 Each release has a section in English and in Russian; the release workflow puts them in
 the signed manifest, and the panel shows the one in its language.
 
+## 0.5.2.2
+### en
+- **Cascade: "Russia direct" turns itself on** when an inbound or a node's relay is given an exit through another node (or the exit changes). Keeping the same exit leaves the switch as the admin set it, and it can still be turned off.
+- **.ru, .su and .рф always leave from the first node** in this mode, ahead of the exit, like the geosite rule in 3x-ui. They need no geodata; geosite:category-ru and geoip:ru still apply once the databases are on the node.
+- **Fixed: without geodata the mode was silently dropped** and the whole inbound went to the exit. Now the Russian zones still stay on the node. The node must be updated for the zones to apply.
+
+### ru
+- **Каскад: «Россия напрямую» включается сам**, когда инбаунду или relay ноды задают выход через другую ноду (или меняют его). Если выход тот же, переключатель остаётся таким, как его поставил администратор, и его по-прежнему можно выключить.
+- **.ru, .su и .рф всегда выходят с первой ноды** в этом режиме, до правила выхода, как правило geosite в 3x-ui. Им не нужны геобазы; geosite:category-ru и geoip:ru добавляются, когда базы есть на ноде.
+- **Исправлено: без геобаз режим молча отключался**, и весь инбаунд уходил на выход. Теперь российские зоны всё равно остаются на ноде. Чтобы зоны заработали, ноду нужно обновить.
+
 ## 0.5.2.1
 ### en
 - **Cascade: "Russia direct"** (off by default). In a cascade, traffic to Russian sites and addresses can leave from the first node itself, and only the rest goes on to the exit. Switch it per inbound and for the node's relay in the node's Cascade window. The panel fetches the GeoIP and GeoSite databases, checks them before keeping them, refreshes them every 3 days and sends them to the nodes; a node never downloads them. Without the databases the mode stays off and the inbound goes whole to its exit, as before.
