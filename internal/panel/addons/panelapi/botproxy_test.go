@@ -396,11 +396,14 @@ func TestBotRPCAdminCalls(t *testing.T) {
 	reads := []struct{ method, args string }{
 		{"Admin.Overview", `[900]`}, {"Admin.Users", `[900,"",0]`}, {"Admin.User", `[900,1]`},
 		{"Admin.Nodes", `[900]`}, {"Admin.Payments", `[900,"",0]`}, {"Admin.Payment", `[900,1]`}, {"Admin.Tariffs", `[900]`},
+		{"Admin.Promos", `[900,0]`}, {"Admin.Promo", `[900,1]`}, {"Admin.Tariff", `[900,1]`}, {"Admin.Tops", `[900,"traffic"]`},
 	}
 	writes := []struct{ method, args string }{
 		{"Admin.GrantDays", `[900,1,30]`}, {"Admin.SetDisabled", `[900,1,true]`},
 		{"Admin.SetTrafficLimit", `[900,1,50]`}, {"Admin.SetDeviceLimit", `[900,1,3]`}, {"Admin.SetNote", `[900,1,"x"]`},
 		{"Admin.SetTariff", `[900,1,1]`}, {"Admin.ResetTraffic", `[900,1]`}, {"Admin.Reissue", `[900,1]`}, {"Admin.Delete", `[900,1]`},
+		{"Admin.CreatePromo", `[900,{"Type":"days","Value":7}]`}, {"Admin.SetPromoEnabled", `[900,1,false]`}, {"Admin.DeletePromo", `[900,1]`},
+		{"Admin.SetTariffOnSale", `[900,1,false]`}, {"Admin.SetTariffPrice", `[900,1,"RUB",100]`},
 	}
 	// The holder of the bot with no users permission reads nothing of the admin's.
 	grant(`["bot"]`)

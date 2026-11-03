@@ -20,7 +20,7 @@ import (
 
 // adminState is what the bot waits for from one admin's next message.
 type adminState struct {
-	kind  string // search, days, broadcast, gb, devices or note
+	kind  string // search, days, broadcast, gb, devices, note, or the shop's promo_* and tariff_*
 	user  int64  // for days, gb, devices and note: the subscription
 	query string
 }
@@ -107,6 +107,9 @@ func (b *Bot) adminMessage(ctx context.Context, m *tgapi.Message) bool {
 		return false
 	}
 	if b.srvText(chat, st, text, aw, srvWordsFor(cfg.Lang)) {
+		return true
+	}
+	if b.shopText(chat, st, text, shopWordsFor(cfg.Lang)) {
 		return true
 	}
 	switch st.kind {
@@ -198,7 +201,7 @@ func (b *Bot) adminPress(ctx context.Context, chat, msg int64, data string) bool
 	cmd, _, _ := strings.Cut(data, ":")
 	switch cmd {
 	case "a", "ao", "au", "an", "ap", "aP", "ac", "ae", "ak", "ad", "as", "az", "ab",
-		"ag", "av", "ar", "ai", "ax", "at", "aT", "aN", "aS", "aG":
+		"ag", "av", "ar", "ai", "ax", "at", "aT", "aN", "aS", "aG", "aQ", "aq", "aW", "aF", "aY":
 	default:
 		return false
 	}
@@ -498,7 +501,7 @@ func (b *Bot) adminScreen(ctx context.Context, chat int64, data, notice string) 
 	case "ab": // ab asks for the text; ab:p previews it and asks to confirm
 		if arg == "x" {
 			b.dropDraft(chat)
-			return pre + head("🛡", aw.title), b.adminHome(aw, growthAdminWordsFor(cfg.Lang).btn)
+			return pre + head("🛡", aw.title), b.adminHome(aw, shopWordsFor(cfg.Lang), growthAdminWordsFor(cfg.Lang).btn)
 		}
 		if arg != "p" {
 			b.dropDraft(chat)
@@ -525,6 +528,16 @@ func (b *Bot) adminScreen(ctx context.Context, chat int64, data, notice string) 
 		return b.srvList(ctx, adm, chat, aw, srvWordsFor(cfg.Lang), pre, fail, home)
 	case "aS":
 		return b.srvScreen(ctx, adm, chat, arg, aw, srvWordsFor(cfg.Lang), pre, fail, home)
+	case "aQ":
+		return b.promoList(ctx, adm, chat, arg, aw, shopWordsFor(cfg.Lang), pre, fail, home)
+	case "aq":
+		return b.promoScreen(ctx, adm, chat, arg, aw, shopWordsFor(cfg.Lang), pre, fail, home)
+	case "aW":
+		return b.promoWizard(ctx, adm, chat, arg, aw, shopWordsFor(cfg.Lang), pre, fail)
+	case "aF":
+		return b.tariffScreen(ctx, adm, chat, arg, aw, shopWordsFor(cfg.Lang), pre, fail, home)
+	case "aY":
+		return b.topScreen(ctx, adm, chat, arg, aw, shopWordsFor(cfg.Lang), pre, fail, home)
 	case "ap": // ap:<filter>:<page>; the filter is a letter, "" all
 		fl, pgS, _ := strings.Cut(arg, ":")
 		status := payFilterStatus(fl)
@@ -597,7 +610,7 @@ func (b *Bot) adminScreen(ctx context.Context, chat int64, data, notice string) 
 		return pre + join(lines...), kb(rows...)
 	}
 	// "a": the admin's first screen
-	return pre + "<b>" + html.EscapeString(aw.title) + "</b>", b.adminHome(aw, growthAdminWordsFor(cfg.Lang).btn)
+	return pre + "<b>" + html.EscapeString(aw.title) + "</b>", b.adminHome(aw, shopWordsFor(cfg.Lang), growthAdminWordsFor(cfg.Lang).btn)
 }
 
 // payFilterStatus maps the filter letter in a payment list's callback to the status it asks.
@@ -648,10 +661,12 @@ func limitWord(aw *admWords, n int64) string {
 }
 
 // adminHome is the keyboard of the admin's first screen.
-func (b *Bot) adminHome(aw *admWords, growthBtn string) *tgapi.Keyboard {
+func (b *Bot) adminHome(aw *admWords, sw *shopWords, growthBtn string) *tgapi.Keyboard {
 	return &tgapi.Keyboard{InlineKeyboard: [][]tgapi.Button{
 		{clr(tgapi.StylePrimary, tgapi.Button{Text: aw.overview, CallbackData: "ao"}), {Text: aw.users, CallbackData: "au:0"}},
 		{{Text: aw.nodes, CallbackData: "an"}, {Text: aw.payments, CallbackData: "ap::0"}},
+		{{Text: sw.promos, CallbackData: "aQ:0"}, {Text: sw.tariffs, CallbackData: "aF"}},
+		{{Text: sw.tops, CallbackData: "aY:t"}},
 		{{Text: aw.broadcast, CallbackData: "ab"}, {Text: growthBtn, CallbackData: "aG"}},
 	}}
 }

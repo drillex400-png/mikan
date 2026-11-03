@@ -3,6 +3,19 @@
 Each release has a section in English and in Russian; the release workflow puts them in
 the signed manifest, and the panel shows the one in its language.
 
+## 0.5.2.4
+### en
+- **Promo codes in the bot's /admin.** The list with totals (codes, active ones, activations, days and traffic given), a card for each code with its uses gauge and term, turning a code on or off, removing it (asked twice) and its activations. A new code is made in five steps with ready buttons or your own value: days, traffic, percent, rubles or Stars off; the number of uses; how long it lives; your own code or a random one.
+- **Tariffs in /admin.** Each tariff's card: term, traffic, devices, speed, prices and how many subscriptions it has. Take a tariff off sale or put it back, set its price in rubles or Stars; every change is confirmed and noted in the journal.
+- **Tops in /admin:** clients by traffic in the period, by money paid, and subscriptions that look shared (devices from 3+ different IPs in a day, or more devices than the limit), each opening the client's card.
+- The bot needs this panel: update the panel first, then the bot.
+
+### ru
+- **Промокоды в /admin бота.** Список с итогами (кодов, действуют, активаций, подарено дней и трафика), карточка кода со шкалой активаций и сроком, включение и выключение, удаление (с двойным подтверждением) и список активаций. Новый код создаётся за пять шагов, готовыми кнопками или своим значением: дни, трафик, скидка в процентах, рублях или Stars; число активаций; срок действия; свой код или случайный.
+- **Тарифы в /admin.** Карточка тарифа: срок, трафик, устройства, скорость, цены и сколько на нём подписок. Тариф можно снять с продажи и вернуть, поменять цену в рублях или Stars; каждое изменение подтверждается и пишется в журнал.
+- **Топы в /admin:** клиенты по трафику за период, по сумме оплат и подписки, похожие на общие (устройства с 3+ разных IP за сутки или больше лимита). Из каждой строки открывается карточка клиента.
+- Боту нужна эта версия панели: сначала обновите панель, потом бота.
+
 ## 0.5.2.3
 ### en
 - **"Russia direct" in the protocol editor.** Under "Way out to the internet → Via a node" the switch now shows what goes where: Russian sites from this node, everything else through the exit, and whether the address databases are in.

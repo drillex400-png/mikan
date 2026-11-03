@@ -124,6 +124,19 @@ var botRPC = map[string]rpcRule{
 	"Admin.Broadcast":         rule("users:write", []int{0}, nil),
 	// The referral programme's settings are noted in the journal before the bot saves them.
 	"Admin.NoteGrowth": rule("users:write", []int{0}, nil),
+	// The shop: reading the promo codes, a tariff's card and the top lists needs users:read;
+	// making, turning and removing a code and changing a tariff's price or sale, users:write.
+	"Admin.Promos":          rule("users:read", []int{0}, nil),
+	"Admin.PromoStats":      rule("users:read", []int{0}, nil),
+	"Admin.Promo":           rule("users:read", []int{0}, nil),
+	"Admin.PromoUses":       rule("users:read", []int{0}, nil),
+	"Admin.Tariff":          rule("users:read", []int{0}, nil),
+	"Admin.Tops":            rule("users:read", []int{0}, nil),
+	"Admin.CreatePromo":     rule("users:write", []int{0}, nil),
+	"Admin.SetPromoEnabled": rule("users:write", []int{0}, nil),
+	"Admin.DeletePromo":     rule("users:write", []int{0}, nil),
+	"Admin.SetTariffOnSale": rule("users:write", []int{0}, nil),
+	"Admin.SetTariffPrice":  rule("users:write", []int{0}, nil),
 }
 
 // talkWindow: how long an account counts as talking to the bot after its last message.

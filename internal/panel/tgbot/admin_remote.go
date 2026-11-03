@@ -167,3 +167,73 @@ func (a remoteAdmin) Broadcast(ctx context.Context, by int64, text string) (int,
 	err := a.r.call(ctx, "Admin.Broadcast", []any{by, text}, &n)
 	return n, err
 }
+
+func (a remoteAdmin) Promos(ctx context.Context, by int64, page int) ([]AdminPromo, bool, error) {
+	var (
+		p    []AdminPromo
+		more bool
+	)
+	err := a.r.call(ctx, "Admin.Promos", []any{by, page}, &p, &more)
+	return p, more, err
+}
+
+func (a remoteAdmin) PromoStats(ctx context.Context, by int64) (AdminPromoStats, error) {
+	var s AdminPromoStats
+	err := a.r.call(ctx, "Admin.PromoStats", []any{by}, &s)
+	return s, err
+}
+
+func (a remoteAdmin) Promo(ctx context.Context, by, id int64) (AdminPromo, error) {
+	var p AdminPromo
+	err := a.r.call(ctx, "Admin.Promo", []any{by, id}, &p)
+	return p, err
+}
+
+func (a remoteAdmin) CreatePromo(ctx context.Context, by int64, in AdminPromoInput) (AdminPromo, error) {
+	var p AdminPromo
+	err := a.r.call(ctx, "Admin.CreatePromo", []any{by, in}, &p)
+	return p, err
+}
+
+func (a remoteAdmin) SetPromoEnabled(ctx context.Context, by, id int64, on bool) (AdminPromo, error) {
+	var p AdminPromo
+	err := a.r.call(ctx, "Admin.SetPromoEnabled", []any{by, id, on}, &p)
+	return p, err
+}
+
+func (a remoteAdmin) DeletePromo(ctx context.Context, by, id int64) error {
+	return a.r.call(ctx, "Admin.DeletePromo", []any{by, id})
+}
+
+func (a remoteAdmin) PromoUses(ctx context.Context, by, id int64, page int) ([]AdminPromoUse, bool, error) {
+	var (
+		p    []AdminPromoUse
+		more bool
+	)
+	err := a.r.call(ctx, "Admin.PromoUses", []any{by, id, page}, &p, &more)
+	return p, more, err
+}
+
+func (a remoteAdmin) Tariff(ctx context.Context, by, id int64) (AdminTariffInfo, error) {
+	var t AdminTariffInfo
+	err := a.r.call(ctx, "Admin.Tariff", []any{by, id}, &t)
+	return t, err
+}
+
+func (a remoteAdmin) SetTariffOnSale(ctx context.Context, by, id int64, on bool) (AdminTariffInfo, error) {
+	var t AdminTariffInfo
+	err := a.r.call(ctx, "Admin.SetTariffOnSale", []any{by, id, on}, &t)
+	return t, err
+}
+
+func (a remoteAdmin) SetTariffPrice(ctx context.Context, by, id int64, currency string, amount int64) (AdminTariffInfo, error) {
+	var t AdminTariffInfo
+	err := a.r.call(ctx, "Admin.SetTariffPrice", []any{by, id, currency, amount}, &t)
+	return t, err
+}
+
+func (a remoteAdmin) Tops(ctx context.Context, by int64, kind string) ([]AdminTop, error) {
+	var t []AdminTop
+	err := a.r.call(ctx, "Admin.Tops", []any{by, kind}, &t)
+	return t, err
+}

@@ -78,6 +78,8 @@ type AdminTariff struct {
 	Devices  int64 // 0: none
 	PriceRub int64 // kopecks; 0: none
 	OnSale   bool
+	// PriceStars is the price in Stars; 0: none.
+	PriceStars int64
 }
 
 // AdminPaymentInfo is one payment as its card shows it.
@@ -213,6 +215,26 @@ type Admin interface {
 	Payments(ctx context.Context, by int64, status string, page int) ([]AdminPayment, bool, error)
 	// Payment is one payment's card.
 	Payment(ctx context.Context, by, id int64) (AdminPaymentInfo, error)
+	// Promos lists a page of promo codes, newest first; the second result: a page after it.
+	Promos(ctx context.Context, by int64, page int) ([]AdminPromo, bool, error)
+	PromoStats(ctx context.Context, by int64) (AdminPromoStats, error)
+	Promo(ctx context.Context, by, id int64) (AdminPromo, error)
+	// CreatePromo makes a promo code; a code that is taken is ErrAdminInput.
+	CreatePromo(ctx context.Context, by int64, in AdminPromoInput) (AdminPromo, error)
+	SetPromoEnabled(ctx context.Context, by, id int64, on bool) (AdminPromo, error)
+	// DeletePromo removes the code; its activations stay in the history.
+	DeletePromo(ctx context.Context, by, id int64) error
+	// PromoUses lists a page of the code's activations, newest first.
+	PromoUses(ctx context.Context, by, id int64, page int) ([]AdminPromoUse, bool, error)
+	// Tariff is one tariff's card.
+	Tariff(ctx context.Context, by, id int64) (AdminTariffInfo, error)
+	// SetTariffOnSale puts the tariff on sale or takes it off; its subscriptions keep it.
+	SetTariffOnSale(ctx context.Context, by, id int64, on bool) (AdminTariffInfo, error)
+	// SetTariffPrice sets the price of the tariff's first term: rubles (in kopecks) for RUB,
+	// Stars for XTR; 0 takes the price off.
+	SetTariffPrice(ctx context.Context, by, id int64, currency string, amount int64) (AdminTariffInfo, error)
+	// Tops is a top list of the kind (TopTraffic, TopMoney, TopShare).
+	Tops(ctx context.Context, by int64, kind string) ([]AdminTop, error)
 	// BroadcastAudience is how many accounts a broadcast would reach now.
 	BroadcastAudience(ctx context.Context, by int64) (int, error)
 	// Broadcast queues the text for every account with a subscription and returns how many
