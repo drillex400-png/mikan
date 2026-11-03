@@ -237,7 +237,8 @@ func TestAutoRUDirect(t *testing.T) {
 		}
 		return slices.Contains(ids, ptr(id))
 	}
-	if err := domain.AutoRelayRUDirect(ctx, q, in.NodeID, sql.NullInt64{}, ptr(b)); err != nil || !relayOn(in.NodeID) {
+	// The relay lives on b (cascadeToB made it); a's node is a stand-in for its next hop.
+	if err := domain.AutoRelayRUDirect(ctx, q, b, sql.NullInt64{}, ptr(in.NodeID)); err != nil || !relayOn(b) {
 		t.Fatalf("relay off after an exit was added: err=%v", err)
 	}
 }
